@@ -1,5 +1,3 @@
-VERSION = "1.0"
-
 import os
 import logging
 
@@ -14,32 +12,13 @@ logging.basicConfig(
         logging.FileHandler(log_file_path),
     ]
 )
-
 logger = logging.getLogger(__name__)
 
-from GUI import ModelOrganizerApp
+from GUI import StableOrganizerApp
 import tkinter as tk
 
-
-transformer = {
-    "TopTop": "Best",
-}
-
-# List of categories
-#categories = ["_Meh", "_Okay", "_Good", "_Top", "_TopTop", "_Difficult"]
-#types = ["Attire","Character","Concept","Style"]
-
+#region Main
 if __name__ == "__main__":
-    #print(png_dir_path_found)
-    #os.startfile(png_dir_path_found)
-    #print(os.path.split(lora_path_found)[0])
-    #os.startfile(os.path.split(lora_path_found)[0])
-    #os.startfile(f'explorer /select,"{lora_path_found}"')
-    #actor = ACT("MoveProcessedLoras", {"dirs": info_dict.get_dirs(), "specific": "okay","data": [lora_dict,png_dict]})
-    #actor = ACT("LogDicts", {"data": [lora_dict,png_dict]})
-    #open_to_file(lora_path_found)
-    #actor.log_dicts()
-    #logger.debug(json.dumps(png_dict,indent=2))
     root = tk.Tk()
-    app = ModelOrganizerApp(root)
+    app = StableOrganizerApp(root)
     root.mainloop()
