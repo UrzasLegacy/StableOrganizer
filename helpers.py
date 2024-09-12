@@ -8,6 +8,12 @@ import subprocess
 
 ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
+CATEGORIES = ["Attire","Character","Concept","Style","SFW"]
+QUALITIES = ["Difficult", "Meh", "Okay", "Good", "Top", "Best"]
+
+transformer = {
+    "TopTop": "Best",
+}
 
 #region Helper Functions
 def get_lora_directory_quality_and_category(subdirectory_path: str) -> tuple:
