@@ -1,3 +1,3 @@
-from .gui import ModelOrganizerApp
+from .gui import StableOrganizerApp
 
-__all__ = ["ModelOrganizerApp"]
+__all__ = ["StableOrganizerApp"]

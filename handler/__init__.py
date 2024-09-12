@@ -1,4 +1,4 @@
-from .ACT import ACT
-from .INFO import INFO
+from .ActionHandler import ActionHandler
+from .InfoHandler import InfoHandler
 
-__all__ = ["ACT", "INFO"]
+__all__ = ["ActionHandler", "InfoHandler"]

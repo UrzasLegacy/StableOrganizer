@@ -1,24 +1,21 @@
 import logging
+import os
+
 logger = logging.getLogger(__name__)
 
-import os
 ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 from helpers import *
 
-#region INFO
-class INFO():
-    """Class to hold various info gathering tools that return info objects for the ACT class."""
-    def __init__(self, lora_dir_path: str="", png_dir_path: str="", output_dir_path: str=""):
-        if not lora_dir_path.strip():
-            raise ValueError("You must provide a lora directory filepath")
-        if not png_dir_path.strip():
-            raise ValueError("You must provide a png directory filepath")
-        if not output_dir_path.strip():
-            raise ValueError("You must provide an output directory filepath")
+#region InfoHandler
+class InfoHandler():
+    """Class to hold various info gathering tools that return info for the ActionHandler class."""
+    def __init__(self, config_data=None):
+        if not config_data:
+            raise ValueError("You must provide config data")
         
-        self.lora_dir_path = lora_dir_path
-        self.png_dir_path = png_dir_path
-        self.output_dir_path = output_dir_path
+        self.lora_dir_path = config_data.get('lora_dir')
+        self.png_lora_dir_path = config_data.get('png_lora_dir')
+        self.output_dir_path = config_data.get('output_dir')
 
     def get_dirs(self) -> tuple[str, str, str]:
         return self.lora_dir_path, self.png_dir_path, self.output_dir_path
