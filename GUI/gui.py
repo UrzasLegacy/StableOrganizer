@@ -51,7 +51,7 @@ class StableOrganizerApp:
         self.built_lora_dict = self.info_handler.build_lora_dictionary()
 
         self.acting = False
-        self.action_handler = ActionHandler({"action_type": "DoAThing", "config_data": self.config_data, "action_data": {}})
+        self.action_handler = None #ActionHandler({"action_type": "DoAThing", "config_data": self.config_data, "action_data": {}})
 
         self.create_menu()
         self.create_context_menu()

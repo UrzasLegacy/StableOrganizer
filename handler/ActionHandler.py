@@ -34,7 +34,7 @@ class ActionHandler:
             "OrganizePNG": self.organize_png_directories_by_lora_directory,
             "MoveScoredLoras": self.move_loras_to_intermediary_by_png_directory,
             "LogDicts": self.log_dicts,
-            "MoveFile": self.move_file,
+            "MoveFile": self.move,
         }
 
         if not action_type in self.func_map:
