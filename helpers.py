@@ -154,3 +154,33 @@ def save_json_file(file: str, data: dict, relative_path: bool=True):
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, 'w', encoding='UTF-8') as file:
         json.dump(data, file, sort_keys=False, indent=2, separators=(",", ": "))
+
+def add_to_json_dictionary(file_path: str, subdicts: list, relative_path: bool=True) -> dict:
+    """Special function to add entries to Ali .json and preserve formatting. Returns updated dictionary.\n\n
+subdicts = [
+    {"loraname": {"TRIGGERS": "", "WEIGHT": "", "NEGATIVES": "", "NULLIFIERS": "", "NOTES": ""}},
+]"""
+    ali_dict = load_json_file(file_path, relative_path)
+
+    for dictionary in subdicts:
+        for key, data in dictionary.items():
+            ali_dict[key] = data
+
+    if relative_path:
+        file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), file_path)       
+
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+    sorted_dict = {key: ali_dict[key] for key in sorted(ali_dict)}
+
+    out_str = "{"
+    for k, v in sorted_dict.items():
+        out_str += f'\n    "{k}": {json.dumps(v, separators=(", ", ": "))},'
+
+    out_str = out_str[:-1]
+    out_str += "\n}"
+
+    with open(file_path, 'w', encoding='UTF-8') as file:
+        file.write(out_str)
+
+    return sorted_dict
