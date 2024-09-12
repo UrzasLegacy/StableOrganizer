@@ -6,43 +6,58 @@ import tkinter.messagebox as msgbox
 from tkinter import ttk
 
 from helpers import *
-from handler import *
+from handler import InfoHandler, ActionHandler
 
 ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VERSION = 1.0
 
 default_config = {
-    "lora_dir": r"S:\SD_Archive\models\Lora\PONY",
-    "pngs_dir": r"X:\CardArchive\LoraCards\_ProcessingPNGs",
-    "output_dir": r"S:\LoraIntermediary"
-}
+    "ckpt_processing_dir": r"X:\SD_X\models\checkpoints\_IN",
+    "lora_processing_dir": r"S:\SD_Archive\models\Lora\PONY\__LoraStaging",
+    "png_lora_dir": r"X:\CardArchive\LoraCards\_ProcessingPNGs",
 
-#region LoraOrganizerApp
-class ModelOrganizerApp:
-    """GUI for Lora Organization"""
+    "png_dir": r"X:\CardArchive",
+    "ckpt_dir": r"X:\SD_X\models\checkpoints",
+    "lora_dir": r"S:\SD_Archive\models\Lora\PONY",
+    "output_dir": r"S:\LoraIntermediary",
+
+}
+        #{"action_type": "DoAThing", "config_data": config_data, "action_data": {}}
+
+#print(png_dir_path_found)
+#os.startfile(png_dir_path_found)
+#print(os.path.split(lora_path_found)[0])
+#os.startfile(os.path.split(lora_path_found)[0])
+#os.startfile(f'explorer /select,"{lora_path_found}"')
+#actor = ActionHandler("MoveProcessedLoras", {"dirs": info_dict.get_dirs(), "specific": "okay","data": [lora_dict,png_dict]})
+#actor = ActionHandler("LogDicts", {"data": [lora_dict,png_dict]})
+#open_to_file(lora_path_found)
+#actor.log_dicts()
+#logger.debug(json.dumps(png_dict,indent=2))
+
+#region StableOrganizerApp
+class StableOrganizerApp:
+    """GUI for Model and Output Organization"""
     def __init__(self, root: tk.Tk):      
         self.root = root
-        self.root.title(f"Model Organizer v{VERSION}")
+        self.root.title(f"StableOrganizer v{VERSION}")
         self.root.geometry("1920x1080")
-        self.config_path = os.path.join(ROOT_DIRECTORY, "config.json")
-        self.config = self.load_config()
-        self.lora_dir = self.config.get("lora_dir", None)
-        self.pngs_dir = self.config.get("pngs_dir", None)
-        self.output_dir = self.config.get("output_dir", None)
+        
+        self.config_data = self.setup_config()
 
-        info_handler = INFO(self.lora_dir, self.pngs_dir, self.output_dir)
+        self.info_handler = InfoHandler(self.config_data)
 
-        self.built_png_dict = info_handler.build_png_dictionary()
-        self.built_lora_dict = info_handler.build_lora_dictionary()
+        self.built_png_dict = self.info_handler.build_png_dictionary()
+        self.built_lora_dict = self.info_handler.build_lora_dictionary()
+
+        self.acting = False
+        self.action_handler = ActionHandler({"action_type": "DoAThing", "config_data": self.config_data, "action_data": {}})
 
         self.create_menu()
         self.create_context_menu()
         self.create_tree()
         self.set_keybinds()
         self.populate_tree(self.built_lora_dict, self.built_png_dict)
-
-
-
 
 
     #region Configuration
@@ -61,10 +76,15 @@ class ModelOrganizerApp:
     def save_config(self, config: dict) -> None:
         save_json_file(self.config_path, config, relative_path=False)
 
-    #endregion
+    #endregion Configuration
 
 
     #region Setup Functions
+    def setup_config(self):
+        self.config_path = os.path.join(ROOT_DIRECTORY, "config.json")
+        return self.load_config()
+
+
     def create_tree(self):
         frame = tk.Frame(self.root)
         frame.pack(fill="both", expand=True)
@@ -113,6 +133,7 @@ class ModelOrganizerApp:
         file_menu = tk.Menu(menubar, tearoff=0)
         file_menu.add_command(label="Repopulate Tree", command=self.repopulate_tree)
         file_menu.add_command(label="Log Dicts", command=self.log_dicts)
+        file_menu.add_command(label="Config", command=self.change_config)
 
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit)
@@ -125,9 +146,20 @@ class ModelOrganizerApp:
 
     def create_context_menu(self):
         self.context_menu = tk.Menu(self.root, tearoff=0)
-        self.context_menu.add_command(label="Open Lora File", command=self.open_lora_parent_directory)
-        self.context_menu.add_separator()
+        self.context_menu.add_command(label="Open Lora Parent Folder", command=self.open_lora_parent_directory)
         self.context_menu.add_command(label="Open PNG Directory", command=self.open_png_directory)
+        self.context_menu.add_separator()
+        for quality in QUALITIES:
+            self.context_menu.add_command(label=f"Move to {quality}", command=lambda quality: self.move_to_quality_directory(quality))
+
+        # Create a submenu
+        submenu = tk.Menu(self.context_menu, tearoff=0)
+        submenu.add_command(label="Submenu Item 1", command=lambda x: x)
+        submenu.add_command(label="Submenu Item 2", command=lambda x: x)
+
+        # Add the submenu to the context menu
+        self.context_menu.add_cascade(label="Move To", menu=submenu)
+
 
     def set_keybinds(self):
         # Root binds
@@ -138,13 +170,11 @@ class ModelOrganizerApp:
         self.tree.bind("<Double-1>", self.on_double_click)
         self.tree.bind("<Alt-Double-1>", self.on_alt_double_click)
         self.tree.bind("<Button-3>", self.on_right_click)
-    #endregion
 
+    #endregion Setup Functions
 
 
     #region Keybinds
-
-
     def on_double_click(self, event):
         self.open_lora_parent_directory()
 
@@ -160,8 +190,7 @@ class ModelOrganizerApp:
     def on_escape(self, event):
         self.root.quit()
 
-    #endregion
-
+    #endregion Keybinds
 
 
     #region Menu Callbacks
@@ -169,9 +198,10 @@ class ModelOrganizerApp:
         self.populate_tree(self.built_lora_dict, self.built_png_dict)
 
     def log_dicts(self):
-        actor = ACT("LogDicts",{"data": [self.built_lora_dict, self.built_png_dict]})
+        actor = ActionHandler("LogDicts",{"data": [self.built_lora_dict, self.built_png_dict]})
         actor.act()
-    #endregion
+
+    #endregion Menu Callbacks
 
 
 
@@ -183,9 +213,14 @@ class ModelOrganizerApp:
         # Get the selected item on right-click
         item_id = self.tree.identify_row(event.y)
         if item_id:
-            self.tree.selection_set(item_id)
+            #self.tree.selection_set(item_id)
             self.context_menu.post(event.x_root, event.y_root)
 
+    def change_config(self):
+        pass
+
+    def move_to_quality_directory(self, quality):
+        pass
     #endregion
 
 
@@ -247,10 +282,8 @@ class ModelOrganizerApp:
         # Recursively search all children of this parent
         for child in self.tree.get_children(parent):
             self.search_in_subtree(child, search_query)
-    #endregion
 
-
-
+    #endregion Search Callbacks
 
 
     #region Misc Callbacks
@@ -276,4 +309,4 @@ class ModelOrganizerApp:
             if not open_to_file(file_path):
                 msgbox.showinfo("Failed", f"No file exists for: {item_text}")
 
-    #endregion
+    #endregion Misc Callbacks
