@@ -9,10 +9,7 @@ from helpers import *
 #region InfoHandler
 class InfoHandler():
     """Class to hold various info gathering tools that return info for the ActionHandler class."""
-    def __init__(self, config_data=None):
-        if not config_data:
-            raise ValueError("You must provide config data")
-        
+    def __init__(self, config_data):
         self.lora_dir_path = config_data.get('lora_dir')
         self.png_lora_dir_path = config_data.get('png_lora_dir')
         self.output_dir_path = config_data.get('output_dir')

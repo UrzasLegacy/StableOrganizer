@@ -46,10 +46,6 @@ class ActionHandler:
         self.action_type: str = self.info_data.get("action_type", "")
         self.action_data: dict = self.info_data.get("action_data", {})
 
- 
- 
-
-
 
         print(f"""Lora Directory: {self.get_setting("lora_dir_path")}
 PNG Directory: {self.get_setting("png_lora_dir_path")}
@@ -78,6 +74,7 @@ Output Directory: {self.get_setting("output_dir_path")}""")
         with open(png_log_file_path,"w") as f:
             f.write(json.dumps(png_dict,indent=2))
 
+
     def move(self, source_path, destination_path) -> None:
         src_exists = os.path.exists(source_path)
         if not src_exists:
@@ -98,12 +95,13 @@ Output Directory: {self.get_setting("output_dir_path")}""")
                 self.move_all_files(source_path, destination_path)
                 return
         
-        if os.path.isfile(source_path):
+        if src_is_file(source_path):
             os.makedirs(os.path.dirname(destination_path), exist_ok=True)
-        elif os.path.isdir(source_path):
+        elif src_is_folder(source_path):
             os.makedirs(destination_path, exist_ok=True)
 
         shutil.move(source_path, destination_path)
+
 
     def move_all_files(self, source_directory, destination_directory):
         os.makedirs(destination_directory, exist_ok=True)
@@ -116,8 +114,8 @@ Output Directory: {self.get_setting("output_dir_path")}""")
 
             # Check if it is a file (not a directory)
             if os.path.isfile(src_file_path):
-                # Move the file
                 shutil.move(src_file_path, dst_file_path)
+
 
     def organize_png_directories_by_lora_directory(self) -> None:
         """Create a directory hierarchy to match the lora directory and match the png directories to their lora counterpart's position."""
@@ -146,6 +144,7 @@ Output Directory: {self.get_setting("output_dir_path")}""")
 
             if not found:
                 print(f"Warning: No matching safetensor found for PNG directory {folder}, {lora_name},{category}/{quality}")
+
 
     def move_loras_to_intermediary_by_png_directory(self, png_directory) -> None:
         """Based on PNG directories in the directory name specified by self.specific, move matching loras to the output folder."""
