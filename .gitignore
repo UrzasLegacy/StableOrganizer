@@ -1,7 +1,6 @@
 *.json
 *.log
-*.pyc
 .venv/
-__pycache__
+__pycache__/
 test.py
 todo.md

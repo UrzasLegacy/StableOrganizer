@@ -6,7 +6,6 @@ logger = logging.getLogger(__name__)
 ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 from helpers import *
 
-#region InfoHandler
 class InfoHandler():
     """Class to hold various info gathering tools that return info for the ActionHandler class."""
     def __init__(self, config_data=None):
@@ -14,35 +13,95 @@ class InfoHandler():
             raise ValueError("You must provide config data")
         
         self.lora_dir_path = config_data.get('lora_dir')
-        self.png_lora_dir_path = config_data.get('png_lora_dir')
+        self.lora_png_dir_path = config_data.get('lora_png_dir')
         self.output_dir_path = config_data.get('output_dir')
 
+
     def get_dirs(self) -> tuple[str, str, str]:
-        return self.lora_dir_path, self.png_lora_dir_path, self.output_dir_path
+        return self.lora_dir_path, self.lora_png_dir_path, self.output_dir_path
     
+
+# {
+#   "Attire": {
+#     "In": [],
+#     "CloseAnalysis": [],
+#     "Difficult": [],
+#     "Good": [],
+#     "Meh": [],
+#     "Okay": [],
+#     "Scoring": [],
+#     "Top": [],
+#     "TopTop": []
+#   },
+#   "Character": {
+#     "In": [],
+#     "CloseAnalysis": [],
+#     "Difficult": [],
+#     "Good": [],
+#     "Meh": [],
+#     "Okay": [],
+#     "Scoring": [],
+#     "Top": [],
+#     "TopTop": []
+#   },
+#   "Concept": {
+#     "In": [],
+#     "CloseAnalysis": [],
+#     "Difficult": [],
+#     "Good": [],
+#     "Meh": [],
+#     "Okay": [],
+#     "Scoring": [],
+#     "Top": [],
+#     "TopTop": []
+#   },
+#   "Style": {
+#     "In": [],
+#     "CloseAnalysis": [],
+#     "Difficult": [],
+#     "Good": [],
+#     "Meh": [],
+#     "Okay": [],
+#     "Scoring": [],
+#     "Top": [],
+#     "TopTop": []
+#   }
+# }
+
+
     def build_png_dictionary(self) -> dict[str, dict[str, list]]:
         """Create an organized dictionary of png directories with structure category:quality:[(lora_name, lora_path)]."""
         png_directory_dict = {}
-        for quality_folder in os.listdir(self.png_lora_dir_path):
+        for quality_folder in os.listdir(self.lora_png_dir_path):
             quality = get_directory_quality(quality_folder)
             if not quality:
                 continue
 
-            quality_folder_path = os.path.join(self.png_lora_dir_path, quality_folder)
+            quality_folder_path = os.path.join(self.lora_png_dir_path, quality_folder)
             for lora_png_directory in os.listdir(quality_folder_path):
                 lora_name, category = get_png_directory_lora_name_and_category(lora_png_directory)
                 if not lora_name:
                     continue
-
-                if category not in png_directory_dict:
-                    png_directory_dict[category] = {}
-                if quality not in png_directory_dict[category]:
-                    png_directory_dict[category][quality] = []
-
                 absolute_path = os.path.join(quality_folder_path, lora_png_directory)
-                png_directory_dict[category][quality].append((lora_name, absolute_path))
+                png_directory_dict.setdefault(category, {}).setdefault(quality, []).append((lora_name, absolute_path))
 
         return png_directory_dict
+    
+
+    def get_png_data(self):
+            """Builds a dictionary of PNG directories organized by category and quality."""
+            png_data = {}
+            for directory in os.listdir(self.png_dir):
+                quality = get_directory_quality(directory)
+                if quality:
+                    dir_path = os.path.join(self.png_dir, directory)
+                    for subdirectory in os.listdir(dir_path):
+                        lora_name, category = get_png_directory_lora_name_and_category(subdirectory)
+                        if lora_name and category:
+                            png_path = os.path.join(dir_path, subdirectory)
+                            png_data.setdefault(category, {}).setdefault(quality, []).append((lora_name, png_path))
+            return png_data
+    
 
     def build_lora_dictionary(self) -> dict[str, dict[str, list]]:
         """Create an organized dictionary of loras with structure category:quality:[(lora_name, lora_path)]."""

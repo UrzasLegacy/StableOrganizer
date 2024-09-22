@@ -8,19 +8,18 @@ import subprocess
 
 ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
-CATEGORIES = ["Attire","Character","Concept","Style","SFW"]
-QUALITIES = ["Difficult", "Meh", "Okay", "Good", "Top", "Best"]
+CATEGORIES = ["Attire","Character","Concept","Style"]
+QUALITIES = ["Scoring", "CloseAnalysis", "SFW", "Difficult", "Meh", "Okay", "Good", "Top", "Best"]
 
 transformer = {
     "TopTop": "Best",
 }
 
-#region Helper Functions
-def get_lora_directory_quality_and_category(subdirectory_path: str) -> tuple:
+def get_lora_directory_quality_and_category(subdirectory_name: str) -> tuple:
     """Function to get the category and type from the safetensor directory name."""
-    # if subdirectory_path[:2] == "__": # Ignore folders that start with double underscore
+    # if subdirectory_name[:2] == "__": # Ignore folders that start with double underscore
     #     return False, False
-    split = subdirectory_path.split("_")
+    split = subdirectory_name.split("_")
     split = [item for item in split if item]
     if len(split) != 2:
         return False, False
@@ -29,13 +28,13 @@ def get_lora_directory_quality_and_category(subdirectory_path: str) -> tuple:
     return (category, quality)
 
 
-def get_png_directory_lora_name_and_category(subdirectory_path: str) -> tuple:
+def get_png_directory_lora_name_and_category(subdirectory_name: str) -> tuple:
     """Function to get the lora name and type from the png directory name.\n
     E.g., "FindForgetYou_v2_Slavic_Dress_Attire_TestCards/FindForgetYou_v2_Slavic_Dress_Attire_TestCards_00002.png" -> (Slavic_Dress, Attire)."""
-    # if subdirectory_path[:2] == "__": # Ignore folders that start with double underscore
+    # if subdirectory_name[:2] == "__": # Ignore folders that start with double underscore
     #     return False
     pattern = r'FindForgetYou_v2_(.*)'
-    match = re.search(pattern, subdirectory_path.replace("_TestCards",""))
+    match = re.search(pattern, subdirectory_name.replace("_TestCards",""))
     if match:
         lora_name = match.group(1)
         split = lora_name.split("_")
@@ -43,13 +42,15 @@ def get_png_directory_lora_name_and_category(subdirectory_path: str) -> tuple:
         return lora_name, category
     return False, False
 
-def get_directory_quality(subdirectory_path: str) -> str:
-    # if subdirectory_path[:2] == "__": # Ignore folders that start with double underscore
-    #     return False
+
+def get_directory_quality(subdirectory_name: str) -> str:
     """Function to get the quality from a lora or png directory name.\n
     E.g., "S:/Loras/Attire_Good" -> "Good" OR "S:/PNGs/good" -> "Good"."""
-    t = {
+    # if subdirectory_name[:2] == "__": # Ignore folders that start with double underscore
+    #     return False
+    quality_map = {
         "sfw": "SFW",
+        "scoring": "Scoring",
         "difficult": "Difficult",
         "meh": "Meh",
         "okay": "Okay",
@@ -59,12 +60,10 @@ def get_directory_quality(subdirectory_path: str) -> str:
         "best": "Best",
     }
 
-    base_path = os.path.splitext(subdirectory_path.strip("_").lower())[0]
-    base_name = os.path.split(base_path)[-1]
-    quality = base_name.split("_")[-1] #names e.g., "Attire_Good" or "good"
-    match = t.get(quality, False)
+    base_name = os.path.basename(subdirectory_name.strip("_"))
+    quality = base_name.split("_")[-1].lower()
+    return quality_map.get(quality, None)
 
-    return match
 
 def get_lora_name(file_path: str) -> str:
     """Function to get the lora name from the safetensors file\n

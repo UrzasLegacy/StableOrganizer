@@ -14,10 +14,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from GUI import StableOrganizerApp
 import tkinter as tk
+from GUI import StableOrganizerApp
 
-#region Main
 if __name__ == "__main__":
     root = tk.Tk()
     app = StableOrganizerApp(root)
