@@ -10,7 +10,7 @@ from handlers import InfoHandler, ActionHandler
 from helpers import load_json_file, save_json_file, get_path_by_lora_name, open_to_file, QUALITIES
 
 
-VERSION = 1.0
+VERSION = 0.7
 ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 default_config = {
     "ckpt_processing_dir": r"X:\SD_X\models\checkpoints\_IN",
