@@ -1,41 +1,21 @@
 import logging
 logger = logging.getLogger(__name__)
 
+import os
 import tkinter as tk
 import tkinter.messagebox as msgbox
 from tkinter import ttk
 
-from helpers import *
 from handlers import InfoHandler, ActionHandler
+from helpers import load_json_file, save_json_file, get_path_by_lora_name, open_to_file, QUALITIES
 
 
 VERSION = 1.0
-#############################################################################################################################################
-#                              ________  ___________   __       _______   ___       _______                                                 #
-#                             /"       )("     _   ") /""\     |   _  "\ |"  |     /"     "|                                                #
-#                            (:   \___/  )__/  \\__/ /    \    (. |_)  :)||  |    (: ______)                                                #
-#                             \___  \       \\_ /   /' /\  \   |:     \/ |:  |     \/    |                                                  #
-#                              __/  \\      |.  |  //  __'  \  (|  _  \\  \  |___  // ___)_                                                 #
-#                             /" \   :)     \:  | /   /  \\  \ |: |_)  :)( \_|:  \(:      "|                                                #
-#                            (_______/       \__|(___/    \___)(_______/  \_______)\_______)                                                #
-#                                              ._______  .______  ._____  .______  .______  .___ .______ ._______.______                    #
-#                                              : .___  \ : __   \ :_ ___\ :      \ :      \ : __|\____  |: .____/: __   \                   #
-#                                              | :   |  ||  \____||   |___|   .   ||       || : |/  ____|| : _/\ |  \____|                  #
-#                                              |     :  ||   :  \ |   /  ||   :   ||   |   ||   |\      ||   /  \|   :  \                   #
-#                                               \_. ___/ |   |___\|. __  ||___|   ||___|   ||   | \__:__||_.: __/|   |___\                  #
-#                                                 :/     |___|     :/ |. |    |___|    |___||___|    :      :/   |___|                      #
-#                                                 :                :   :/                            •                                      #
-#region     
-#                                                                                                              StableOrganizerApp #
-#############################################################################################################################################
-
 ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 default_config = {
     "ckpt_processing_dir": r"X:\SD_X\models\checkpoints\_IN",
     "lora_processing_dir": r"S:\SD_Archive\models\Lora\PONY\__LoraStaging",
     "lora_png_dir": r"X:\CardArchive\LoraCards\_ProcessingPNGs",
-
     "png_dir": r"X:\CardArchive",
     "ckpt_dir": r"X:\SD_X\models\checkpoints",
     "lora_dir": r"S:\SD_Archive\models\Lora\PONY",
