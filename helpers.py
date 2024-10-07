@@ -66,6 +66,7 @@ def get_directory_quality(subdirectory_name: str) -> str:
     return quality_map.get(quality, None)
 
 
+
 def get_lora_name(file_path: str) -> str:
     """Function to get the lora name from the safetensors file\n
     E.g., "PONY/Attire_Good/Pony_XL_Slavic_Dress_Attire.safetensors" -> "Slavic_Dress_Attire"."""
@@ -82,6 +83,7 @@ def get_lora_name(file_path: str) -> str:
         return lora_name
     return False
 
+
 def patch_sub_lists(in_dict, specific="") -> list:
     """Recursively search in_dict for all keys that contain the specific string. If a matching key's value is a list, collect all elements from it and extend them into one out_list."""
     out_list = []
@@ -95,6 +97,7 @@ def patch_sub_lists(in_dict, specific="") -> list:
 
     recurse(in_dict, specific)
     return out_list
+
 
 def patch_sub_dicts(in_dict, specific="") -> dict:
     """Recursively search in_dict for all keys that contain the specific string. If a matching key's value is a dict, collect all values from it and update them into one out_dict."""
@@ -113,6 +116,7 @@ def patch_sub_dicts(in_dict, specific="") -> dict:
     recurse(in_dict, specific)
     return out_dict
 
+
 def get_path_by_lora_name(dictionary, lora_name):
     """Traverse the dictionary and find the matching Lora name"""
     for _category, subcategories in dictionary.items():
@@ -122,6 +126,7 @@ def get_path_by_lora_name(dictionary, lora_name):
                     return lora[1]
                 
     return None
+
 
 def open_to_file(file_path: str) -> None:
     """If file_path is a directory, it opens the directory. If file_path is a file, it opens the parent directory with the file selected."""
@@ -133,6 +138,7 @@ def open_to_file(file_path: str) -> None:
             subprocess.run(['explorer', file_path])
             return True
     return False
+
 
 def load_json_file(file: str, default=None, relative_path: bool = True):
     """Reads a json file and returns the json dict, stripping out "//" comments first."""
@@ -146,6 +152,7 @@ def load_json_file(file: str, default=None, relative_path: bool = True):
         return json.loads(config)
     return default
 
+
 def save_json_file(file: str, data: dict, relative_path: bool=True):
     if relative_path:
         file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), file)       
@@ -154,6 +161,7 @@ def save_json_file(file: str, data: dict, relative_path: bool=True):
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, 'w', encoding='UTF-8') as file:
         json.dump(data, file, sort_keys=False, indent=2, separators=(",", ": "))
+
 
 def add_to_json_dictionary(file_path: str, subdicts: list, relative_path: bool=True) -> dict:
     """Special function to add entries to Ali .json and preserve formatting. Returns updated dictionary.\n\n

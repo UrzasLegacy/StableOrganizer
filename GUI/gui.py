@@ -122,7 +122,7 @@ class StableOrganizerApp:
     def populate_tree(self, built_lora_dict, built_png_dict):
         """Populate the treeview with categories, qualities, and Lora names."""
         full_definitions = load_json_file("./AliDictionaries.json")
-        lora_definitions = full_definitions.get("lora_dictionary",{})
+        lora_definitions = full_definitions.get("lora_dictionary", {})
         self.tree.delete(*self.tree.get_children())
 
         for category, qualities in built_lora_dict.items():
@@ -132,11 +132,11 @@ class StableOrganizerApp:
                 for lora in loras:
                     lora_path = lora[1]
                     png_dir_path = get_path_by_lora_name(built_png_dict, lora[0])
-                    if lora_path and png_dir_path:
-                        self.tree.insert(quality_id, "end", text=lora[0], values=(lora_definitions.get(lora[0], None), lora_path, png_dir_path), tags=("cyan",))  # Insert Lora name
-                    else:
-                        self.tree.insert(quality_id, "end", text=lora[0], values=(lora_definitions.get(lora[0], None), lora_path, png_dir_path))  # Insert Lora name
-
+                    tags = tuple()
+                    if png_dir_path is not None:
+                        tags = ("has_imgs",)
+                    self.tree.insert(quality_id, "end", text=lora[0], values=(lora_definitions.get(lora[0], None), lora_path, png_dir_path), tags=(tags,))  # Insert Lora name
+                    self.tree.tag_configure('has_imgs', background='lightblue') #TODO foreground='black' to change font color 
 
     def create_menu(self):
         """Create a File menu at the top of the window."""
@@ -170,7 +170,7 @@ class StableOrganizerApp:
         # submenu.add_command(label="Submenu Item 1", command=lambda x: x)
         # submenu.add_command(label="Submenu Item 2", command=lambda x: x)
 
-        # Add the submenu to the context menu
+        # # Add the submenu to the context menu
         # self.context_menu.add_cascade(label="Move To", menu=submenu)
 
 
