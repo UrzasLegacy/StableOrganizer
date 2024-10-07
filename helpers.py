@@ -125,7 +125,7 @@ def get_path_by_lora_name(dictionary, lora_name):
                 if lora[0] == lora_name:
                     return lora[1]
                 
-    return None
+    return "None"
 
 
 def open_to_file(file_path: str) -> None:

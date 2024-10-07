@@ -95,7 +95,8 @@ class StableOrganizerApp:
         self.tree.heading("definition", text="Lora Definition", anchor="w")
 
         self.tree.pack(side="left", fill="both", expand=True)
-        self.tree.tag_configure("cyan", background="lightcyan")
+        self.tree.tag_configure("has_imgs", background="lightcyan")
+        self.tree.tag_configure("no_imgs", background="lightyellow")
 
         vertical_scrollbar.config(command=self.tree.yview)
 
@@ -112,11 +113,12 @@ class StableOrganizerApp:
                 for lora in loras:
                     lora_path = lora[1]
                     png_dir_path = get_path_by_lora_name(built_png_dict, lora[0])
-                    tags = tuple()
-                    if png_dir_path is not None:
+                    if png_dir_path and png_dir_path != "None":
                         tags = ("has_imgs",)
-                    self.tree.insert(quality_id, "end", text=lora[0], values=(lora_definitions.get(lora[0], None), lora_path, png_dir_path), tags=(tags,))  # Insert Lora name
-                    self.tree.tag_configure('has_imgs', background='lightblue') #TODO foreground='black' to change font color 
+                    else:
+                        tags = ("no_imgs",)
+                    self.tree.insert(quality_id, "end", text=lora[0], values=(lora_definitions.get(lora[0], None), lora_path, png_dir_path), tags=tags)  # Insert Lora name
+                    #self.tree.tag_configure('has_imgs', background='lightblue') #TODO foreground='black' to change font color 
 
     def create_menu(self):
         """Create a File menu at the top of the window."""
@@ -333,10 +335,13 @@ class StableOrganizerApp:
         # Modify the values if needed (based on new_values parameter)
         updated_values = tuple(new_values) if new_values else item_values
         _, lora_path, png_path = updated_values 
-
+        if png_path and png_path != "None":
+            tags = ("has_imgs",)
+        else:
+            tags = ("no_imgs",)
         # Insert the item into a new parent with updated fields
         if lora_path != "None" and png_path != "None":
-            self.tree.insert(new_parent, 'end', text=item_text, values=updated_values, tags=("cyan",))
+            self.tree.insert(new_parent, 'end', text=item_text, values=updated_values, tags=tags)
         else:
             self.tree.insert(new_parent, 'end', text=item_text, values=updated_values)
 
