@@ -6,6 +6,9 @@ from helpers import *
 
 ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+
+
+
 class ActionHandler:
     """Class to hold various functions that perform actions (file movement, name changing, etc) based on data returned by InfoHandler class.
     
@@ -17,7 +20,8 @@ class ActionHandler:
     
     def __init__(self, config=None):
         self.config_data = config
-
+        self.lora_png_dir = self.get_setting("lora_png_dir")
+        self.lora_dir = self.get_setting("lora_dir")
 
     def get_setting(self, setting):
         return self.config_data.get(setting)
@@ -51,7 +55,7 @@ class ActionHandler:
                     logging.debug(f"Move failed! Target path already exists: {target_path}")
                     return
             else:
-                logging.debug(f"Move failed! Destination file already exists: {destination_path}")
+                logging.debug("Move failed! Destination file already exists: %s", destination_path)
                 return
         else:
             # Create parent directories if they don't exist
@@ -59,15 +63,12 @@ class ActionHandler:
             os.makedirs(parent_dir, exist_ok=True)
             target_path = destination_path
 
-        # Perform the move operation
         try:
             shutil.move(source_path, target_path)
-            logging.info(f"Successfully moved {source_path} to {target_path}")
+            logging.debug("Successfully moved %s to %s", source_path, target_path)
         except Exception as e:
-            logging.error(f"Error moving file: {e}")
+            logging.error("Error moving file: %s", e, exc_info=1,  stack_info=True)
             raise
-
-
 
 
     def move_all_files(self, source_directory, destination_directory):
@@ -83,6 +84,36 @@ class ActionHandler:
             if os.path.isfile(src_file_path):
                 # Move the file
                 shutil.move(src_file_path, dst_file_path)
+
+
+    def initialize_lora_png_directories(self):
+        logger.info("Initializing Lora png directories.")
+        self.initialize_directories(self.lora_png_dir)
+
+
+    def initialize_lora_tensor_directories(self):
+        logger.info("Initializing Lora tensor directories.")
+        self.initialize_directories(self.lora_dir)
+
+
+    def initialize_directories(self, parent_dir):
+        if not os.path.exists(parent_dir):
+            try:
+                os.makedirs(parent_dir)
+                logger.info("Created %s directory.", parent_dir)
+            except Exception as e:
+                logger.error("Error creating %s directory: %s", parent_dir, e, exc_info=1, stack_info=True)
+
+        for category in CATEGORIES:
+            for quality in QUALITIES:
+                dir_name = f"{category}_{quality}"
+                dir_path = os.path.join(parent_dir, dir_name)
+                if not os.path.exists(dir_path):
+                    try:
+                        os.mkdir(dir_path)
+                        logger.info("Created %s directory.", dir_name)
+                    except Exception as e:
+                        logger.error("Error creating %s directory: %s", dir_name, e, exc_info=1, stack_info=True)
 
 
     def organize_png_directories_by_lora_directory(self, parent_directory, png_dict, lora_dict) -> None:

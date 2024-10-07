@@ -51,6 +51,7 @@ def get_directory_quality(subdirectory_name: str) -> str:
     quality_map = {
         "sfw": "SFW",
         "scoring": "Scoring",
+        "closeanalysis": "CloseAnalysis",
         "difficult": "Difficult",
         "meh": "Meh",
         "okay": "Okay",

@@ -21,52 +21,7 @@ class InfoHandler():
         return self.lora_dir_path, self.lora_png_dir_path, self.output_dir_path
     
 
-# {
-#   "Attire": {
-#     "In": [],
-#     "CloseAnalysis": [],
-#     "Difficult": [],
-#     "Good": [],
-#     "Meh": [],
-#     "Okay": [],
-#     "Scoring": [],
-#     "Top": [],
-#     "TopTop": []
-#   },
-#   "Character": {
-#     "In": [],
-#     "CloseAnalysis": [],
-#     "Difficult": [],
-#     "Good": [],
-#     "Meh": [],
-#     "Okay": [],
-#     "Scoring": [],
-#     "Top": [],
-#     "TopTop": []
-#   },
-#   "Concept": {
-#     "In": [],
-#     "CloseAnalysis": [],
-#     "Difficult": [],
-#     "Good": [],
-#     "Meh": [],
-#     "Okay": [],
-#     "Scoring": [],
-#     "Top": [],
-#     "TopTop": []
-#   },
-#   "Style": {
-#     "In": [],
-#     "CloseAnalysis": [],
-#     "Difficult": [],
-#     "Good": [],
-#     "Meh": [],
-#     "Okay": [],
-#     "Scoring": [],
-#     "Top": [],
-#     "TopTop": []
-#   }
-# }
+
 
 
     def build_png_dictionary(self) -> dict[str, dict[str, list]]:

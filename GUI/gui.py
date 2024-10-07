@@ -8,8 +8,28 @@ from tkinter import ttk
 from helpers import *
 from handlers import InfoHandler, ActionHandler
 
-ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 VERSION = 1.0
+#############################################################################################################################################
+#                              ________  ___________   __       _______   ___       _______                                                 #
+#                             /"       )("     _   ") /""\     |   _  "\ |"  |     /"     "|                                                #
+#                            (:   \___/  )__/  \\__/ /    \    (. |_)  :)||  |    (: ______)                                                #
+#                             \___  \       \\_ /   /' /\  \   |:     \/ |:  |     \/    |                                                  #
+#                              __/  \\      |.  |  //  __'  \  (|  _  \\  \  |___  // ___)_                                                 #
+#                             /" \   :)     \:  | /   /  \\  \ |: |_)  :)( \_|:  \(:      "|                                                #
+#                            (_______/       \__|(___/    \___)(_______/  \_______)\_______)                                                #
+#                                              ._______  .______  ._____  .______  .______  .___ .______ ._______.______                    #
+#                                              : .___  \ : __   \ :_ ___\ :      \ :      \ : __|\____  |: .____/: __   \                   #
+#                                              | :   |  ||  \____||   |___|   .   ||       || : |/  ____|| : _/\ |  \____|                  #
+#                                              |     :  ||   :  \ |   /  ||   :   ||   |   ||   |\      ||   /  \|   :  \                   #
+#                                               \_. ___/ |   |___\|. __  ||___|   ||___|   ||   | \__:__||_.: __/|   |___\                  #
+#                                                 :/     |___|     :/ |. |    |___|    |___||___|    :      :/   |___|                      #
+#                                                 :                :   :/                            •                                      #
+#region     
+#                                                                                                              StableOrganizerApp #
+#############################################################################################################################################
+
+ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 default_config = {
     "ckpt_processing_dir": r"X:\SD_X\models\checkpoints\_IN",
@@ -22,7 +42,6 @@ default_config = {
     "output_dir": r"S:\LoraIntermediary",
 }
 
-#region StableOrganizerApp
 class StableOrganizerApp:
     """GUI for Model and Output Organization"""
     def __init__(self, root: tk.Tk):      
@@ -30,7 +49,9 @@ class StableOrganizerApp:
         self.root.title(f"StableOrganizer v{VERSION}")
         self.root.geometry("1920x1080")
         
-        self.config_data = self.setup_config()
+        self.config_path = os.path.join(ROOT_DIRECTORY, "config.json")
+
+        self.config_data = self.load_config()
 
         self.info_handler = InfoHandler(self.config_data)
         self.action_handler = ActionHandler(self.config_data)
@@ -46,10 +67,9 @@ class StableOrganizerApp:
         self.populate_tree(self.built_lora_dict, self.built_png_dict)
 
 
-    #region Configuration
-    def initialize_config(self) -> dict:
-        self.save_config(default_config)
-        return default_config
+#============================================================================================================================================
+    #region                                                         Configuration                                                           =
+#============================================================================================================================================
 
     def get_setting(self, setting):
         return self.config_data.get(setting)
@@ -58,21 +78,20 @@ class StableOrganizerApp:
         if os.path.exists(self.config_path):
             config = load_json_file(self.config_path, default={}, relative_path=False)
         else:
-            config = self.initialize_config()
-        print(config)
+            config = default_config
+            self.save_config(config)
         return config
-
-
+    
     def save_config(self, config: dict) -> None:
         save_json_file(self.config_path, config, relative_path=False)
+    
+    
     #endregion Configuration
 
 
-    #region Setup Functions
-    def setup_config(self):
-        self.config_path = os.path.join(ROOT_DIRECTORY, "config.json")
-        return self.load_config()
-
+#============================================================================================================================================
+    #region                                                         Setup Functions                                                         #
+#============================================================================================================================================
 
     def create_tree(self):
         frame = tk.Frame(self.root)
@@ -85,7 +104,7 @@ class StableOrganizerApp:
 
         # Define column properties (widths and stretchable behavior)
         self.tree.column("#0", width=300, stretch=False)  # Main column (Lora name)
-        self.tree.column("definition", width=1920, stretch=True)  # PNG directory path
+        self.tree.column("definition", width=500, stretch=True)  # PNG directory path
         self.tree.column("lora_path", width=100, stretch=True)  # Lora file path
         self.tree.column("png_path", width=100, stretch=True)  # PNG directory path
         
@@ -164,10 +183,15 @@ class StableOrganizerApp:
         self.tree.bind("<Double-1>", self.on_double_click)
         self.tree.bind("<Alt-Double-1>", self.on_alt_double_click)
         self.tree.bind("<Button-3>", self.on_right_click)
+    
+    
     #endregion Setup Functions
 
 
-    #region Keybinds
+#============================================================================================================================================
+    #region                                                         Keybinds                                                                #
+#============================================================================================================================================
+ 
     def on_double_click(self, event):
         self.open_lora_parent_directory()
 
@@ -186,29 +210,43 @@ class StableOrganizerApp:
 
     def on_escape(self, event):
         self.root.quit()
+
+
     #endregion Keybinds
 
 
-    #region Menu Callbacks
+#============================================================================================================================================
+    #region                                                        Menu Callbacks                                                           #
+#============================================================================================================================================
+  
     def repopulate_tree(self):
         self.populate_tree(self.built_lora_dict, self.built_png_dict)
 
 
     def log_dicts(self):
         self.action_handler.log_dicts(self.built_lora_dict, self.built_png_dict)
+    
+    
     #endregion Menu Callbacks
 
+#============================================================================================================================================
+    #region                                                       Context Callbacks                                                         #
+#============================================================================================================================================
 
-
-
-
-    #region Context Callbacks
     def show_context_menu(self, event):
         """Display the right-click context menu."""
         # Get the selected item on right-click
         item_id = self.tree.identify_row(event.y)
         if item_id:
-            self.tree.selection_set(item_id)
+            selected_items = self.tree.selection()
+            if len(selected_items) == 1:
+                self.tree.selection_set(item_id)
+                selected_items = self.tree.selection()
+
+            for selection in selected_items:
+                if not self.tree.item(selection, "values"): # invalid row selection
+                    self.tree.selection_remove(selection)
+
             self.context_menu.post(event.x_root, event.y_root)
 
 
@@ -216,39 +254,47 @@ class StableOrganizerApp:
         pass
 
 
-
     def move_to_quality_directory(self, quality):
         selected_item = self.tree.selection()
-        selected_path = self.get_full_path(selected_item[0])
+        for selection in selected_item:
+            selected_path = self.get_full_path(selection)
 
-        category, current_quality, lora_name = selected_path.split('\\')
+            category, current_quality, lora_name = selected_path.split('\\')
 
-        item_text = self.tree.item(selected_item, "text")
-        item_values = list(self.tree.item(selected_item, "values"))
+            if not self.tree.item(selection, "values"): # invalid row selection
+                continue
+
+            item_values = list(self.tree.item(selection, "values"))
 
 
-        current_lora_path = item_values[1]
-        current_png_path = item_values[2]
+            current_lora_path = item_values[1]
+            current_lora_name = os.path.basename(current_lora_path)
+            logger.debug(f"current_lora_name: {current_lora_path}")
 
-        lora_parent_path = self.get_setting("lora_dir")
-        lora_png_parent_path = self.get_setting("lora_png_dir")
+            current_png_path = item_values[2]
+            current_png_dir = os.path.basename(current_png_path)
+            logger.debug(f"cur_png_dir: {current_png_dir}")
+            lora_parent_path = self.get_setting("lora_dir")
+            lora_png_parent_path = self.get_setting("lora_png_dir")
 
-        lora_target_path = os.path.join(lora_parent_path, f"{category}_{quality}")
-        lora_png_target_path = os.path.join(lora_png_parent_path, f"{category}_{quality}")
+            lora_target_path = os.path.join(lora_parent_path, f"{category}_{quality}", current_lora_name)
+            lora_png_target_path = os.path.join(lora_png_parent_path, f"{category}_{quality}", current_png_dir)
 
-        if item_text:
             if current_lora_path != "None":
+                logger.debug(f"Move Lora: {current_lora_path} =====> {lora_target_path}")
                 self.action_handler.move(current_lora_path, lora_target_path)
                 self.built_lora_dict = self.info_handler.build_lora_dictionary()
                 item_values[1] = lora_target_path
             if current_png_path != "None":
-                print("M:", current_png_path, lora_png_target_path)
+                logger.debug(f"Move PNGs: {current_png_path} =====> {lora_png_target_path}")
                 self.action_handler.move(current_png_path, lora_png_target_path)
                 self.built_png_dict = self.info_handler.build_png_dictionary()
                 item_values[2] = lora_png_target_path
+
             new_parent = self.find_category_quality_node(category, quality)
             self.move_and_update_item(new_parent, tuple(item_values))
             self.sort_children(new_parent)
+
 
     def find_category_quality_node(self, category, quality):
         # Iterate over the tree to find the node corresponding to the target category and quality; create it if necessary
@@ -256,10 +302,14 @@ class StableOrganizerApp:
             if self.tree.item(_category, 'text') == category:
                 for _quality in self.tree.get_children(_category):
                     if self.tree.item(_quality, 'text') == quality:
+                        logger.debug(f"Found treeview category node: {_quality}")
                         return _quality
-                new_quality = self.tree.insert(_category, text=quality)
+                logger.debug(f"Creating treeview category: {_category}")
+                new_quality = self.tree.insert(_category, 0, text=quality)
+                logger.debug(f"Created treeview category node: {new_quality}")
                 return new_quality
         return None
+
 
     def sort_children(self, parent_node, reverse=False):
         # Get all children of the parent_node
@@ -303,8 +353,9 @@ class StableOrganizerApp:
         # Modify the values if needed (based on new_values parameter)
         updated_values = tuple(new_values) if new_values else item_values
         _, lora_path, png_path = updated_values 
+
         # Insert the item into a new parent with updated fields
-        if lora_path and png_path:
+        if lora_path != "None" and png_path != "None":
             self.tree.insert(new_parent, 'end', text=item_text, values=updated_values, tags=("cyan",))
         else:
             self.tree.insert(new_parent, 'end', text=item_text, values=updated_values)
@@ -323,13 +374,14 @@ class StableOrganizerApp:
             # If no parent, this is the root or base directory
             return self.tree.item(item_id, 'text')    
 
-    #endregion
+
+    #endregion Context Callbacks
 
 
-
-
-
-    #region Search Callbacks
+#============================================================================================================================================
+    #regio                                                         Search Callbacks                                                         #
+#============================================================================================================================================
+ 
     def open_search_dialog(self, event=None):
         """Open a search dialog when Ctrl+F is pressed."""
         # Create a Toplevel window (popup)
@@ -399,13 +451,17 @@ class StableOrganizerApp:
         # Recursively search all children of this parent
         for child in self.tree.get_children(parent):
             self.search_in_subtree(child, search_query)
+
+
     #endregion Search Callbacks
 
 
-    #region Misc Callbacks
+#============================================================================================================================================
+    #region                                                         Misc Callbacks                                                          #
+#============================================================================================================================================
+ 
     def open_png_directory(self):
         selected_item = self.tree.selection()
-
         item_text = self.tree.item(selected_item, "text")
         file_path = self.tree.item(selected_item, "values")[2] if self.tree.item(selected_item, "values") else None
 
@@ -425,4 +481,6 @@ class StableOrganizerApp:
         if item_text and file_path:
             if not open_to_file(file_path):
                 msgbox.showinfo("Failed", f"No file exists for: {item_text}", parent=self.root)
+
+
     #endregion Misc Callbacks
