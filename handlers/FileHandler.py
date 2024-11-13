@@ -4,7 +4,7 @@ logger = logging.getLogger(__name__)
 import shutil
 from helpers import *
 
-ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
 
 class FileHandler:
@@ -63,9 +63,6 @@ class FileHandler:
             if dest_is_dir:
                 # Move source into destination directory
                 target_path = os.path.join(destination_path, os.path.basename(source_path))
-                if os.path.exists(target_path):
-                    logging.debug(f"Move failed! Target path already exists: {target_path}")
-                    return
             else:
                 logging.debug("Move failed! Destination file already exists: %s", destination_path)
                 return
@@ -74,6 +71,10 @@ class FileHandler:
             parent_dir = os.path.dirname(destination_path) or '.'
             os.makedirs(parent_dir, exist_ok=True)
             target_path = destination_path
+
+        if os.path.exists(target_path):
+            logging.debug(f"Move failed! Target path already exists: {target_path}")
+            return
 
         try:
             shutil.move(source_path, target_path)
@@ -129,7 +130,8 @@ class FileHandler:
                         logger.exception("Error creating %s directory: %s", dir_name, e, exc_info=1, stack_info=True)
 
 
-    def open_to_file(self, filepath: str) -> None:
+    @staticmethod
+    def open_to_file(filepath: str) -> None:
         """If filepath is a directory, it opens the directory. If filepath is a file, it opens the parent directory with the file selected."""
         if filepath:
             if os.path.isfile(filepath):
@@ -141,10 +143,11 @@ class FileHandler:
         return False
 
 
-    def load_json_file(self, file: str, default=None, relative_path: bool = True):
+    @staticmethod
+    def load_json_file(file: str, default=None, relative_path: bool = True):
         """Reads a json file and returns the json dict, stripping out "//" comments first."""
         if relative_path:
-            filepath = os.path.join(os.path.dirname(os.path.realpath(__file__)), file)
+            filepath = os.path.join(os.path.dirname(os.path.realpath(ROOT_DIRECTORY)), file)
         else:
             filepath = file
         if os.path.exists(filepath):
@@ -154,9 +157,10 @@ class FileHandler:
         return default
 
 
+    @staticmethod
     def save_json_file(file: str, data: dict, relative_path: bool=True):
         if relative_path:
-            filepath = os.path.join(os.path.dirname(os.path.realpath(__file__)), file)
+            filepath = os.path.join(os.path.dirname(os.path.realpath(ROOT_DIRECTORY)), file)
         else:
             filepath = file
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
