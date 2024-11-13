@@ -19,8 +19,8 @@ default_config = {
     "lora_processing_dir": r"S:\SD_Archive\models\Lora\PONY\__LoraStaging",
     "lora_png_dir": r"X:\CardArchive\LoraCards\_ProcessingPNGs",
     "png_root_dir": r"X:\CardArchive",
-    "ckpt_dir": r"X:\SD_X\models\checkpoints",
-    "lora_dir": r"S:\SD_Archive\models\Lora\PONY",
+    "ckpt_model_dir": r"X:\SD_X\models\checkpoints",
+    "lora_model_dir": r"S:\SD_Archive\models\Lora\PONY",
     "output_dir": r"S:\LoraIntermediary",
 }
 """GUI for Model and Output Organization"""
@@ -39,6 +39,9 @@ class StableOrganizerApp:
 
         self.info_handler = InfoHandler(self.config_data)
         self.file_handler = FileHandler(self.config_data)
+
+        self.file_handler.initialize_lora_png_directories()
+        self.file_handler.initialize_lora_model_directories()
 
         self.built_png_dict = self.info_handler.build_png_dictionary()
         self.built_lora_dict = self.info_handler.build_lora_dictionary()
@@ -286,11 +289,11 @@ class StableOrganizerApp:
             current_png_path = item_values[2]
             current_png_dir = os.path.basename(current_png_path)
             logger.debug(f"cur_png_dir: {current_png_dir}")
-            lora_parent_path = self.get_setting("lora_dir")
+            lora_model_parent_path = self.get_setting("lora_model_dir")
             lora_png_parent_path = self.get_setting("lora_png_dir")
 
-            lora_target_path = os.path.join(lora_parent_path, f"{category}_{quality}", current_lora_name)
-            lora_png_target_path = os.path.join(lora_png_parent_path, f"{category}_{quality}", current_png_dir)
+            lora_target_path = os.path.normpath(os.path.join(lora_model_parent_path, f"{category}_{quality}", current_lora_name))
+            lora_png_target_path = os.path.normpath(os.path.join(lora_png_parent_path, f"{category}_{quality}", current_png_dir))
 
             if current_lora_path != "None":
                 logger.debug(f"Move Lora: {current_lora_path} =====> {lora_target_path}")

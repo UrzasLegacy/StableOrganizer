@@ -10,10 +10,13 @@ ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
 CATEGORIES = ["Attire","Character","Concept","Style"]
 QUALITIES = ["Scoring", "CloseAnalysis", "SFW", "Difficult", "Meh", "Okay", "Good", "Top", "Best"]
+PNG_DIRECTORY_PATTERN = re.compile(r'FindForgetYou_v2_(.*)')
+
 
 transformer = {
     "TopTop": "Best",
 }
+
 
 def get_lora_directory_quality_and_category(subdirectory_name: str) -> tuple:
     """Function to get the category and type from the safetensor directory name."""
@@ -33,8 +36,7 @@ def get_png_directory_lora_name_and_category(subdirectory_name: str) -> tuple:
     E.g., "FindForgetYou_v2_Slavic_Dress_Attire_TestCards/FindForgetYou_v2_Slavic_Dress_Attire_TestCards_00002.png" -> (Slavic_Dress, Attire)."""
     # if subdirectory_name[:2] == "__": # Ignore folders that start with double underscore
     #     return False
-    pattern = r'FindForgetYou_v2_(.*)'
-    match = re.search(pattern, subdirectory_name.replace("_TestCards",""))
+    match = PNG_DIRECTORY_PATTERN.search(subdirectory_name.replace("_TestCards",""))
     if match:
         lora_name = match.group(1)
         split = lora_name.split("_")
@@ -65,6 +67,22 @@ def get_directory_quality(subdirectory_name: str) -> str:
     quality = base_name.split("_")[-1].lower()
     return quality_map.get(quality, None)
 
+
+def get_directory_category(subdirectory_name: str) -> str:
+    """Function to get the category from a lora or png directory name.\n
+    E.g., "S:/Loras/Attire_Good" -> "Good" OR "S:/PNGs/good" -> "Good"."""
+    # if subdirectory_name[:2] == "__": # Ignore folders that start with double underscore
+    #     return False
+    category_map = {
+        "attire": "Attire",
+        "character": "Character",
+        "concept": "Concept",
+        "style": "Style",
+    }
+
+    base_name = os.path.basename(subdirectory_name.strip("_"))
+    category = base_name.split("_")[0].lower()
+    return category_map.get(category, None)
 
 
 def get_lora_name(file_path: str) -> str:
@@ -124,7 +142,7 @@ def get_path_by_lora_name(dictionary, lora_name):
             for lora in loras:
                 if lora[0] == lora_name:
                     return lora[1]
-                
+
     return "None"
 
 
@@ -143,7 +161,7 @@ def open_to_file(file_path: str) -> None:
 def load_json_file(file: str, default=None, relative_path: bool = True):
     """Reads a json file and returns the json dict, stripping out "//" comments first."""
     if relative_path:
-        file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), file)       
+        file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), file)
     else:
         file_path = file
     if os.path.exists(file_path):
@@ -155,7 +173,7 @@ def load_json_file(file: str, default=None, relative_path: bool = True):
 
 def save_json_file(file: str, data: dict, relative_path: bool=True):
     if relative_path:
-        file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), file)       
+        file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), file)
     else:
         file_path = file
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
@@ -175,7 +193,7 @@ subdicts = [
             ali_dict[key] = data
 
     if relative_path:
-        file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), file_path)       
+        file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), file_path)
 
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
 

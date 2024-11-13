@@ -100,9 +100,10 @@ class FileHandler:
         self._initialize_directories(self.lora_png_dir)
 
 
-    def initialize_lora_tensor_directories(self) -> None:
+    def initialize_lora_model_directories(self) -> None:
         """Create lora model subdirectories."""
-        logger.info("Initializing Lora tensor directories.")
+        logger.info("Initializing Lora model directories.")
+        self._initialize_directories(self.lora_model_dir)
         self._initialize_directories(self.lora_model_dir)
 
 

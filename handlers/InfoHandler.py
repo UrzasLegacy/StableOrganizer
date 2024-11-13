@@ -20,29 +20,40 @@ class InfoHandler():
 
 
     def __init__(self, config_data: dict = None) -> None:
-        self.lora_model_dir = config_data.get('lora_dir')
+        self.lora_model_dir = config_data.get('lora_model_dir')
         self.lora_png_dir = config_data.get('lora_png_dir')
         self.output_dir = config_data.get('output_dir')
+        # self._initialize_directories()
 
 
     def get_dirs(self) -> tuple[str, str, str]:
         return self.lora_model_dir, self.lora_png_dir, self.output_dir
 
 
+    # def _initialize_directories(self) -> None:
+    #     os.makedirs(self.lora_model_dir, exist_ok=True)
+    #     os.makedirs(self.lora_png_dir, exist_ok=True)
+    #     os.makedirs(self.output_dir, exist_ok=True)
+
+
     def build_png_dictionary(self) -> dict[str, dict[str, list]]:
         """Create an organized dictionary of png directories with structure category:quality:[(lora_name, lora_path)]."""
         png_directory_dict = {}
-        for quality_folder in os.listdir(self.lora_png_dir):
-            quality = get_directory_quality(quality_folder)
+        for folder in os.listdir(self.lora_png_dir):
+            quality = get_directory_quality(folder)
             if not quality:
                 continue
-            quality_folder_path = os.path.join(self.lora_png_dir, quality_folder)
-            for lora_png_directory in os.listdir(quality_folder_path):
-                lora_name, category = get_png_directory_lora_name_and_category(lora_png_directory)
+            category = get_directory_category(folder)
+            if not category:
+                continue
+            png_directory_dict.setdefault(category, {}).setdefault(quality, [])
+            folder_path = os.path.join(self.lora_png_dir, folder)
+            for lora_png_directory in os.listdir(folder_path):
+                lora_name, lora_category = get_png_directory_lora_name_and_category(lora_png_directory)
                 if not lora_name:
                     continue
-                absolute_path = os.path.join(quality_folder_path, lora_png_directory)
-                png_directory_dict.setdefault(category, {}).setdefault(quality, []).append((lora_name, absolute_path))
+                absolute_path = os.path.normpath(os.path.join(folder_path, lora_png_directory))
+                png_directory_dict[category][quality].append((lora_name, absolute_path))
         return png_directory_dict
 
 
@@ -63,28 +74,18 @@ class InfoHandler():
 
     def build_lora_dictionary(self) -> dict[str, dict[str, list]]:
         """Create an organized dictionary of loras with structure category:quality:[(lora_name, lora_path), ...]"""
-        safetensors_dict = {}
+        lora_model_dict = {}
         for folder in os.listdir(self.lora_model_dir):
-            folder_info = get_lora_directory_quality_and_category(folder)
-            if not folder_info[0]:
+            category, quality = get_lora_directory_quality_and_category(folder)
+            if not category or not quality:
                 continue
-
-            category, quality = folder_info
-
+            lora_model_dict.setdefault(category, {}).setdefault(quality, [])
             folder_path = os.path.join(self.lora_model_dir, folder)
             for file in os.listdir(folder_path):
                 if file.endswith(".safetensors"):
                     lora_name = get_lora_name(file)
-
                     if not lora_name:
                         continue
-
-                    if category not in safetensors_dict:
-                        safetensors_dict[category] = {}
-                    if quality not in safetensors_dict[category]:
-                        safetensors_dict[category][quality] = []
-
-                    absolute_path = os.path.join(folder_path, file)
-                    safetensors_dict[category][quality].append((lora_name, absolute_path))
-
-        return safetensors_dict
+                    absolute_path = os.path.normpath(os.path.join(folder_path, file))
+                    lora_model_dict[category][quality].append((lora_name, absolute_path))
+        return lora_model_dict
