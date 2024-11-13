@@ -7,42 +7,53 @@ from helpers import *
 ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+class FileHandler:
+    """
+    Container for various functions that perform file actions.
+
+    Methods
+    -------
+    log_dicts(png_dict, lora_dict=None, ckpt_dict=None) -> None:
+        Print dictionaries to file for review.\n
+    move(source_path: str, destination_path: str) -> None:
+        Move file or directory from source to destination.\n
+    move_all_files(source_dir: str, destination_dir: str) -> None:
+        Move all files within a source directory to a destination directory\n
+    move_all_files(source_dir: str, destination_dir: str) -> None:
+        Move all files within a source directory to a destination directory\n
+    initialize_lora_png_directories() -> None:
+        Create lora png subdirectories.\n
+    initialize_lora_tensor_directories() -> None:
+        Create lora model subdirectories.\n
+    """
+
+    def __init__(self, config_data: dict = None) -> None:
+        self.lora_model_dir = config_data.get('lora_model_dir')
+        self.lora_png_dir = config_data.get('lora_png_dir')
+        self.output_dir = config_data.get('output_dir')
 
 
-class ActionHandler:
-    """Class to hold various functions that perform actions (file movement, name changing, etc) based on data returned by InfoHandler class.
-    
-    move(soure_path, destination_path)
-    organize_png_directories_by_lora_directory(parent_directory, png_dict, lora_dict)
-    log_dicts(png_dict, lora_dict)
-    move_scored_loras_to_intermediary(quality_string)
-"""
-    
-    def __init__(self, config=None):
-        self.config_data = config
-        self.lora_png_dir = self.get_setting("lora_png_dir")
-        self.lora_dir = self.get_setting("lora_dir")
-
-    def get_setting(self, setting):
-        return self.config_data.get(setting)
-    
-
-    def log_dicts(self, png_dict, lora_dict) -> None:
-        lora_log_file_path = os.path.splitext(os.path.abspath(__file__))[0] + "_lora_dict.log"
+    def log_dicts(self, png_dict, lora_dict=None, ckpt_dict=None) -> None:
+        """Print dictionaries to file for review."""
         png_log_file_path = os.path.splitext(os.path.abspath(__file__))[0] + "_png_dict.log"
-
-        with open(lora_log_file_path,"w") as f:
-            f.write(json.dumps(lora_dict,indent=2))
         with open(png_log_file_path,"w") as f:
-            f.write(json.dumps(png_dict,indent=2))
+            f.write(json.dumps(png_dict, indent=2))
+        if lora_dict:
+            lora_log_file_path = os.path.splitext(os.path.abspath(__file__))[0] + "_lora_dict.log"
+            with open(lora_log_file_path,"w") as f:
+                f.write(json.dumps(lora_dict, indent=2))
+        if ckpt_dict:
+            ckpt_log_file_path = os.path.splitext(os.path.abspath(__file__))[0] + "_ckpt_dict.log"
+            with open(ckpt_log_file_path,"w") as f:
+                f.write(json.dumps(ckpt_dict, indent=2))
 
 
     def move(self, source_path, destination_path) -> None:
-        # Check if source exists
+        """Move file or directory from source to destination."""
         if not os.path.exists(source_path):
+
             raise ValueError(f"Source path not found: {source_path}")
-        
-        # Determine if destination is a directory
+
         dest_is_dir = os.path.isdir(destination_path)
         dest_exists = os.path.exists(destination_path)
 
@@ -67,42 +78,42 @@ class ActionHandler:
             shutil.move(source_path, target_path)
             logging.debug("Successfully moved %s to %s", source_path, target_path)
         except Exception as e:
-            logging.error("Error moving file: %s", e, exc_info=1,  stack_info=True)
+            logging.exception("Error moving file: %s", e, exc_info=1,  stack_info=True)
             raise
 
 
-    def move_all_files(self, source_directory, destination_directory):
-        os.makedirs(destination_directory, exist_ok=True)
-
-        # Iterate over all files in the source directory
-        for filename in os.listdir(source_directory):
+    def move_all_files(self, source_dir: str, destination_dir: str) -> None:
+        """Move all files within a source directory to a destination directory."""
+        os.makedirs(destination_dir, exist_ok=True)
+        for filename in os.listdir(source_dir):
             # Construct full file path
-            src_file_path = os.path.join(source_directory, filename)
-            dst_file_path = os.path.join(destination_directory, filename)
-
-            # Check if it is a file (not a directory)
+            src_file_path = os.path.join(source_dir, filename)
+            dst_file_path = os.path.join(destination_dir, filename)
+            # Ignore sub directories
             if os.path.isfile(src_file_path):
-                # Move the file
                 shutil.move(src_file_path, dst_file_path)
 
 
-    def initialize_lora_png_directories(self):
+    def initialize_lora_png_directories(self) -> None:
+        """Create lora png subdirectories."""
         logger.info("Initializing Lora png directories.")
-        self.initialize_directories(self.lora_png_dir)
+        self._initialize_directories(self.lora_png_dir)
 
 
-    def initialize_lora_tensor_directories(self):
+    def initialize_lora_tensor_directories(self) -> None:
+        """Create lora model subdirectories."""
         logger.info("Initializing Lora tensor directories.")
-        self.initialize_directories(self.lora_dir)
+        self._initialize_directories(self.lora_model_dir)
 
 
-    def initialize_directories(self, parent_dir):
+    def _initialize_directories(self, parent_dir: str) -> None:
+        """Create subdirectories by category and quality."""
         if not os.path.exists(parent_dir):
             try:
                 os.makedirs(parent_dir)
                 logger.info("Created %s directory.", parent_dir)
             except Exception as e:
-                logger.error("Error creating %s directory: %s", parent_dir, e, exc_info=1, stack_info=True)
+                logger.exception("Error creating %s directory: %s", parent_dir, e, exc_info=1, stack_info=True)
 
         for category in CATEGORIES:
             for quality in QUALITIES:
@@ -113,11 +124,11 @@ class ActionHandler:
                         os.mkdir(dir_path)
                         logger.info("Created %s directory.", dir_name)
                     except Exception as e:
-                        logger.error("Error creating %s directory: %s", dir_name, e, exc_info=1, stack_info=True)
+                        logger.exception("Error creating %s directory: %s", dir_name, e, exc_info=1, stack_info=True)
 
 
-    def organize_png_directories_by_lora_directory(self, parent_directory, png_dict, lora_dict) -> None:
-        """Organizes PNG directories to match the structure of Lora directories."""
+    def organize_png_directories_by_lora_directory(self, parent_directory: str, png_dict: str, lora_dict: str) -> None:
+        """Temporary function to organize PNG directories to match the structure of Lora directories."""
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
@@ -139,7 +150,7 @@ class ActionHandler:
                                 shutil.copytree(png_path, dest_path)
                                 logger.info(f"Copied {png_path} to {dest_path}")
                             except Exception as e:
-                                logger.error(f"Error copying directory: {e}")
+                                logger.exception(f"Error copying directory: {e}")
 
             if not found:
                 print(f"Warning: No matching safetensor found for PNG directory {folder}, {lora_name},{category}/{quality}")
