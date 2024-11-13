@@ -43,7 +43,6 @@ class StableOrganizerApp:
         self.built_png_dict = self.info_handler.build_png_dictionary()
         self.built_lora_dict = self.info_handler.build_lora_dictionary()
 
-
         self.create_menu()
         self.create_context_menu()
         self.create_tree()
@@ -67,7 +66,7 @@ class StableOrganizerApp:
             dict: Settings dictionary.
         """
         if os.path.exists(self.config_path):
-            config = self.file_handler.load_json_file(self.config_path, default={}, relative_path=False)
+            config = FileHandler.load_json_file(self.config_path, default={}, relative_path=False)
         else:
             config = DEFAULT_CONFIG
             self.save_config(config)
@@ -124,7 +123,7 @@ class StableOrganizerApp:
 
     def populate_tree(self, built_lora_dict, built_png_dict) -> None:
         """Populate the treeview with categories, qualities, and Lora names."""
-        full_definitions = self.file_handler.load_json_file("./AliDictionaries.json")
+        full_definitions = self.file_handler.load_json_file("AliDictionaries.json")
         lora_definitions = full_definitions.get("lora_dictionary", {})
         self.tree.delete(*self.tree.get_children())
 
@@ -138,7 +137,7 @@ class StableOrganizerApp:
                     lora_dir_path = self.info_handler.get_path_by_lora_name(built_lora_dict, lora[0])
                     if png_dir_path and png_dir_path != "None":
                         tags = ["has_imgs"]
-                        if png_dir_path != lora_dir_path: #TODO compare quality in both paths
+                        if self.info_handler.get_quality_from_filepath(png_dir_path) != self.info_handler.get_quality_from_filepath(lora_dir_path): #TODO compare quality in both paths
                             tags = ["dir_mismatch"]
                     else:
                         tags = ["no_imgs"]
@@ -270,18 +269,16 @@ class StableOrganizerApp:
         pass
 
 
-    def move_to_quality_directory(self, quality) -> None:
-        selected_item = self.tree.selection()
-        for selection in selected_item:
+    def move_to_quality_directory(self, target_quality) -> None:
+        selected_items = self.tree.selection()
+        parent_sort = set()
+        #selections = [(selection, self.get_full_path(selection)) for selection in selected_items]
+        for selection in selected_items:
             selected_path = self.get_full_path(selection)
-
             category, current_quality, lora_name = selected_path.split('\\')
-
             if not self.tree.item(selection, "values"): # invalid row selection
                 continue
-
             item_values = list(self.tree.item(selection, "values"))
-
 
             current_lora_path = item_values[1]
             current_lora_name = os.path.basename(current_lora_path)
@@ -289,27 +286,34 @@ class StableOrganizerApp:
 
             current_png_path = item_values[2]
             current_png_dir = os.path.basename(current_png_path)
-            logger.debug(f"cur_png_dir: {current_png_dir}")
-            lora_model_parent_path = self.get_setting("lora_model_dir")
-            lora_png_parent_path = self.get_setting("lora_png_dir")
+            logger.debug(f"cur_png_dir_path: {current_png_path}")
 
-            lora_target_path = os.path.normpath(os.path.join(lora_model_parent_path, f"{category}_{quality}", current_lora_name))
-            lora_png_target_path = os.path.normpath(os.path.join(lora_png_parent_path, f"{category}_{quality}", current_png_dir))
+            lora_model_root_path = self.get_setting("lora_model_dir")
+            lora_png_root_path = self.get_setting("lora_png_dir")
+            lora_target_path = os.path.normpath(os.path.join(lora_model_root_path, f"{category}_{target_quality}", current_lora_name))
+            lora_png_target_path = os.path.normpath(os.path.join(lora_png_root_path, f"{category}_{target_quality}", current_png_dir))
 
-            if current_lora_path != "None":
+            update_flag = False
+            if current_lora_path != "None" and current_lora_path != lora_target_path:
+                update_flag = True
                 logger.debug(f"Move Lora: {current_lora_path} =====> {lora_target_path}")
                 self.file_handler.move(current_lora_path, lora_target_path)
                 self.built_lora_dict = self.info_handler.build_lora_dictionary() #TODO refactor to avoid rebuilding entire dictionary every update
                 item_values[1] = lora_target_path
-            if current_png_path != "None":
+            if current_png_path != "None" and current_png_path != lora_png_target_path:
+                update_flag = True
                 logger.debug(f"Move PNGs: {current_png_path} =====> {lora_png_target_path}")
                 self.file_handler.move(current_png_path, lora_png_target_path)
                 self.built_png_dict = self.info_handler.build_png_dictionary() #TODO refactor to avoid rebuilding entire dictionary every update
                 item_values[2] = lora_png_target_path
 
-            new_parent = self.find_category_quality_node(category, quality)
-            self.move_and_update_item(new_parent, tuple(item_values))
-            self.sort_children(new_parent)
+            if update_flag:
+                new_parent = self.find_category_quality_node(category, target_quality)
+                self.move_and_update_row(selection, new_parent, tuple(item_values))
+                parent_sort.add(new_parent)
+
+        for parent in parent_sort:
+            self.sort_children(parent)
 
 
     def find_category_quality_node(self, category, quality) -> str | None:
@@ -350,15 +354,16 @@ class StableOrganizerApp:
             self.tree.insert(parent_node, "end", text=item_text, values=item_values, tags=item_tags)
 
 
-    def move_and_update_item(self, new_parent, new_values) -> None:
+    def move_and_update_row(self, selected_item_id, new_parent, new_values) -> None:
         """Move treeview entry and refresh row values."""
-        # Get the selected item
-        selected_item = self.tree.selection()
-        if not selected_item:
+        if not selected_item_id:
             print("No item selected")
             return
 
-        selected_item_id = selected_item[0]
+        parent_id = self.tree.parent(selected_item_id)
+        if parent_id == new_parent:
+            print("Cancel row move.")
+            return
 
         # Get the current item's text and values
         item_text = self.tree.item(selected_item_id, 'text')  # The item's label/text
