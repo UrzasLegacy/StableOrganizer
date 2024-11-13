@@ -191,10 +191,11 @@ class InfoHandler():
     @staticmethod
     def get_lora_name_and_category_from_png_directory(subdirectory_name: str) -> tuple:
         """Get the lora name and category from the png directory name.\n
-        E.g., "FindForgetYou_v2_Slavic_Dress_Attire_TestCards/FindForgetYou_v2_Slavic_Dress_Attire_TestCards_00002.png" -> (Slavic_Dress, Attire)."""
+        E.g., "FindForgetYou_v2_Slavic_Dress_Attire_TestCards/FindForgetYou_v2_Slavic_Dress_Attire_TestCards" -> (Slavic_Dress, Attire)."""
         # if subdirectory_name[:2] == "__": # Ignore folders that start with double underscore
         #     return False
-        match = PNG_DIRECTORY_PATTERN.search(subdirectory_name.replace("_TestCards",""))
+        pattern = r'FindForgetYou_v2_(.*)'
+        match = re.search(pattern, subdirectory_name.replace("_TestCards",""))
         if match:
             lora_name = match.group(1)
             split = lora_name.split("_")
@@ -209,6 +210,7 @@ class InfoHandler():
         "X:\CardArchive\LoraCards\Attire_Scoring\FindForgetYou_v2_Slavic_Dress_Attire_TestCards" -> "Good"
         "X:\CardArchive\LoraCards\Attire_Scoring\FindForgetYou_v2_Slavic_Dress_Attire_TestCards\FindForgetYou_v2_Slavic_Dress_Attire_TestCards_00001.png" -> "Good".
         """
-        return self.cq_pattern(filepath)
+        match = self.cq_pattern.search(filepath)
+        return match.group() if match else "None"
 
 
