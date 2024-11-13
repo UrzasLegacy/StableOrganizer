@@ -1,26 +1,12 @@
 import logging
-helper_logger = logging.getLogger(__name__)
-
-import json
 import os
-import re
-import subprocess
 
 ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
 CATEGORIES = ["Attire","Character","Concept","Style"]
 QUALITIES = ["Scoring", "CloseAnalysis", "SFW", "Difficult", "Meh", "Okay", "Good", "Top", "Best"]
-PNG_DIRECTORY_PATTERN = re.compile(r'FindForgetYou_v2_(.*)')
 
-
-transformer = {
-    "TopTop": "Best",
-}
-
-
-
-
-
+helper_logger = logging.getLogger(__name__)
 
 
 def patch_sub_lists(in_dict, specific="") -> list:
