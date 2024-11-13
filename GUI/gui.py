@@ -1,4 +1,5 @@
 """Main GUI module"""
+VERSION = 0.7
 
 import logging
 import os
@@ -8,33 +9,29 @@ from tkinter import ttk
 from tkinter.filedialog import askdirectory
 
 from handlers import InfoHandler, FileHandler
-from helpers import load_json_file, save_json_file, get_path_by_lora_name, open_to_file, QUALITIES
+from helpers import QUALITIES
+
+ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_CONFIG = {
+  "ckpt_processing_dir": None,
+  "lora_processing_dir": None,
+  "ckpt_png_dir": None,
+  "lora_png_dir": None,
+  "ckpt_model_dir": None,
+  "lora_model_dir": None,
+  "output_dir": None
+}
+
 logger = logging.getLogger(__name__)
 
-
-VERSION = 0.7
-ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-default_config = {
-    "ckpt_processing_dir": r"X:\SD_X\models\checkpoints\_IN",
-    "lora_processing_dir": r"S:\SD_Archive\models\Lora\PONY\__LoraStaging",
-    "lora_png_dir": r"X:\CardArchive\LoraCards\_ProcessingPNGs",
-    "png_root_dir": r"X:\CardArchive",
-    "ckpt_model_dir": r"X:\SD_X\models\checkpoints",
-    "lora_model_dir": r"S:\SD_Archive\models\Lora\PONY",
-    "output_dir": r"S:\LoraIntermediary",
-}
-"""GUI for Model and Output Organization"""
-
 class StableOrganizerApp:
-    """
-    """
+    """GUI for Model and Output Organization"""
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.root.title(f"StableOrganizer v{VERSION}")
         self.root.geometry("1920x1080")
 
         self.config_path = os.path.join(ROOT_DIRECTORY, "config.json")
-
         self.config_data = self.load_config()
 
         self.info_handler = InfoHandler(self.config_data)
@@ -70,9 +67,9 @@ class StableOrganizerApp:
             dict: Settings dictionary.
         """
         if os.path.exists(self.config_path):
-            config = load_json_file(self.config_path, default={}, relative_path=False)
+            config = self.file_handler.load_json_file(self.config_path, default={}, relative_path=False)
         else:
-            config = default_config
+            config = DEFAULT_CONFIG
             self.save_config(config)
         return config
 
@@ -84,7 +81,7 @@ class StableOrganizerApp:
         Args:
             config (dict): Settings dictionary
         """
-        save_json_file(self.config_path, config, relative_path=False)
+        self.file_handler.save_json_file(self.config_path, config, relative_path=False)
 
 
     #endregion Configuration
@@ -117,15 +114,17 @@ class StableOrganizerApp:
         self.tree.heading("definition", text="Lora Definition", anchor="w")
 
         self.tree.pack(side="left", fill="both", expand=True)
-        self.tree.tag_configure("has_imgs", background="lightcyan")
-        self.tree.tag_configure("no_imgs", background="lightyellow")
+        self.tree.tag_configure("has_imgs", background="light cyan")
+        self.tree.tag_configure("no_imgs", background="light yellow")
+        self.tree.tag_configure("dir_mismatch", background="sienna3")
+        #self.tree.tag_configure("dir_mismatch", background="orange red")
 
         vertical_scrollbar.config(command=self.tree.yview)
 
 
     def populate_tree(self, built_lora_dict, built_png_dict) -> None:
         """Populate the treeview with categories, qualities, and Lora names."""
-        full_definitions = load_json_file("./AliDictionaries.json")
+        full_definitions = self.file_handler.load_json_file("./AliDictionaries.json")
         lora_definitions = full_definitions.get("lora_dictionary", {})
         self.tree.delete(*self.tree.get_children())
 
@@ -135,13 +134,15 @@ class StableOrganizerApp:
                 quality_id = self.tree.insert(category_id, "end", text=quality)  # Insert quality node
                 for lora in loras:
                     lora_path = lora[1]
-                    png_dir_path = get_path_by_lora_name(built_png_dict, lora[0])
+                    png_dir_path = self.info_handler.get_path_by_lora_name(built_png_dict, lora[0])
+                    lora_dir_path = self.info_handler.get_path_by_lora_name(built_lora_dict, lora[0])
                     if png_dir_path and png_dir_path != "None":
-                        tags = ("has_imgs",)
+                        tags = ["has_imgs"]
+                        if png_dir_path != lora_dir_path: #TODO compare quality in both paths
+                            tags = ["dir_mismatch"]
                     else:
-                        tags = ("no_imgs",)
-                    self.tree.insert(quality_id, "end", text=lora[0], values=(lora_definitions.get(lora[0], None), lora_path, png_dir_path), tags=tags)  # Insert Lora name
-                    #self.tree.tag_configure('has_imgs', background='lightblue') #TODO foreground='black' to change font color
+                        tags = ["no_imgs"]
+                    self.tree.insert(quality_id, "end", text=lora[0], values=(lora_definitions.get(lora[0], "None"), lora_path, png_dir_path), tags=tuple(tags))  # Insert Lora name
 
 
     def create_menu(self) -> None:
@@ -298,12 +299,12 @@ class StableOrganizerApp:
             if current_lora_path != "None":
                 logger.debug(f"Move Lora: {current_lora_path} =====> {lora_target_path}")
                 self.file_handler.move(current_lora_path, lora_target_path)
-                self.built_lora_dict = self.info_handler.build_lora_dictionary()
+                self.built_lora_dict = self.info_handler.build_lora_dictionary() #TODO refactor to avoid rebuilding entire dictionary every update
                 item_values[1] = lora_target_path
             if current_png_path != "None":
                 logger.debug(f"Move PNGs: {current_png_path} =====> {lora_png_target_path}")
                 self.file_handler.move(current_png_path, lora_png_target_path)
-                self.built_png_dict = self.info_handler.build_png_dictionary()
+                self.built_png_dict = self.info_handler.build_png_dictionary() #TODO refactor to avoid rebuilding entire dictionary every update
                 item_values[2] = lora_png_target_path
 
             new_parent = self.find_category_quality_node(category, quality)
@@ -480,10 +481,10 @@ class StableOrganizerApp:
         selected_item = self.tree.selection()
         item_text = self.tree.item(selected_item, "text")
         values = self.tree.item(selected_item, "values")
-        file_path = values[2] if values else None
+        filepath = values[2] if values else None
 
-        if item_text and file_path:
-            if not open_to_file(file_path):
+        if item_text and filepath:
+            if not self.file_handler.open_to_file(filepath):
                 msgbox.showinfo("Failed", f"No PNG directory exists for: {item_text}", parent=self.root)
 
 
@@ -495,10 +496,10 @@ class StableOrganizerApp:
         # Get the item's text
         item_text = self.tree.item(selected_item, "text")
         values = self.tree.item(selected_item, "values")
-        file_path = values[1] if values else None
+        filepath = values[1] if values else None
 
-        if item_text and file_path:
-            if not open_to_file(file_path):
+        if item_text and filepath:
+            if not self.file_handler.open_to_file(filepath):
                 msgbox.showinfo("Failed", f"No file exists for: {item_text}", parent=self.root)
 
 

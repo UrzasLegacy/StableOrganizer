@@ -31,8 +31,8 @@ def main():
     safetensors_files = find_safetensors_files(root_directory)
     options = ["_Attire", "_Character", "_Concept", "_Style"]
 
-    for file_path in safetensors_files:
-        file_name = os.path.basename(file_path)
+    for filepath in safetensors_files:
+        file_name = os.path.basename(filepath)
         if not any(opt in file_name for opt in options):
             print(f"\nCurrent file: {file_name}")
             print("Choose an option to add to the filename:")
@@ -43,8 +43,8 @@ def main():
                 base_name, ext = os.path.splitext(file_name)
                 new_file_name = f"{base_name}{options[choice]}".replace(" ","_")
                 new_full_file_name = f"{new_file_name}{ext}"
-                new_file_path = os.path.join(os.path.dirname(file_path), new_full_file_name)
-                os.rename(file_path, new_file_path)
+                new_file_path = os.path.join(os.path.dirname(filepath), new_full_file_name)
+                os.rename(filepath, new_file_path)
                 logging.debug(f"Renamed to: {new_full_file_name}")
                 # Update the dictionary
                 dict_old_name = base_name.replace("Pony_XL_","").replace("SDXL_","")

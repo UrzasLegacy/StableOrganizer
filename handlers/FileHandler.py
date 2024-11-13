@@ -51,9 +51,10 @@ class FileHandler:
     def move(self, source_path, destination_path) -> None:
         """Move file or directory from source to destination."""
         if not os.path.exists(source_path):
-
             raise ValueError(f"Source path not found: {source_path}")
-
+        if source_path == destination_path:
+            logger.debug("Cancel move: %s = %s", source_path, destination_path)
+            return
         dest_is_dir = os.path.isdir(destination_path)
         dest_exists = os.path.exists(destination_path)
 
@@ -128,39 +129,112 @@ class FileHandler:
                         logger.exception("Error creating %s directory: %s", dir_name, e, exc_info=1, stack_info=True)
 
 
-    def organize_png_directories_by_lora_directory(self, parent_directory: str, png_dict: str, lora_dict: str) -> None:
-        """Temporary function to organize PNG directories to match the structure of Lora directories."""
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
-
-        for folder in os.listdir(parent_directory):
-            png_info = get_png_directory_lora_name_and_category(folder)
-            if not png_info:
-                continue
-
-            lora_name, category = png_info
-            found = False
-            for category, qualities in png_dict.items():
-                for quality, png_entries in qualities.items():
-                    target_dir = os.path.join(self.output_dir, f"{category}_{quality}")
-                    os.makedirs(target_dir, exist_ok=True)
-                    for lora_name, png_path in png_entries:
-                        dest_path = os.path.join(target_dir, os.path.basename(png_path))
-                        if not os.path.exists(dest_path):
-                            try:
-                                shutil.copytree(png_path, dest_path)
-                                logger.info(f"Copied {png_path} to {dest_path}")
-                            except Exception as e:
-                                logger.exception(f"Error copying directory: {e}")
-
-            if not found:
-                print(f"Warning: No matching safetensor found for PNG directory {folder}, {lora_name},{category}/{quality}")
+    def open_to_file(self, filepath: str) -> None:
+        """If filepath is a directory, it opens the directory. If filepath is a file, it opens the parent directory with the file selected."""
+        if filepath:
+            if os.path.isfile(filepath):
+                subprocess.run(['explorer', '/select,', filepath])
+                return True
+            elif os.path.isdir(filepath):
+                subprocess.run(['explorer', filepath])
+                return True
+        return False
 
 
-    def move_loras_to_intermediary_by_png_directory(self, png_dict, lora_dict, string_pattern, output_directory) -> None:
-        """Based on PNG directories in the directory name specified by string_pattern, move matching loras to the output folder."""
-        png_tuples = patch_sub_lists(png_dict, string_pattern)
-        logger.debug(json.dumps(lora_dict, indent=2))
+    def load_json_file(self, file: str, default=None, relative_path: bool = True):
+        """Reads a json file and returns the json dict, stripping out "//" comments first."""
+        if relative_path:
+            filepath = os.path.join(os.path.dirname(os.path.realpath(__file__)), file)
+        else:
+            filepath = file
+        if os.path.exists(filepath):
+            with open(filepath, 'r', encoding='UTF-8') as file:
+                config = re.sub(r"(?:^|\s)//.*", "", file.read(), flags=re.MULTILINE)
+            return json.loads(config)
+        return default
 
-        for png_tuple in png_tuples:
-            lora_name, png_dir_path = png_tuple
+
+    def save_json_file(file: str, data: dict, relative_path: bool=True):
+        if relative_path:
+            filepath = os.path.join(os.path.dirname(os.path.realpath(__file__)), file)
+        else:
+            filepath = file
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        with open(filepath, 'w', encoding='UTF-8') as file:
+            json.dump(data, file, sort_keys=False, indent=2, separators=(",", ": "))
+
+
+
+    def add_to_json_dictionary(self, filepath: str, subdicts: list, relative_path: bool=True) -> dict:
+        """Special function to add entries to Ali .json and preserve formatting. Returns updated dictionary.\n\n
+    subdicts = [
+        {"lora_name_key": {"TRIGGERS": "", "WEIGHT": "", "NEGATIVES": "", "NULLIFIERS": "", "NOTES": ""}},
+    ]"""
+        ali_dict = self.load_json_file(filepath, relative_path)
+
+        for dictionary in subdicts:
+            for key, data in dictionary.items():
+                ali_dict[key] = data
+
+        if relative_path:
+            filepath = os.path.join(os.path.dirname(os.path.realpath(__file__)), filepath)
+
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+
+        sorted_dict = {key: ali_dict[key] for key in sorted(ali_dict)}
+
+        out_str = "{"
+        for k, v in sorted_dict.items():
+            out_str += f'\n    "{k}": {json.dumps(v, separators=(", ", ": "))},'
+
+        out_str = out_str[:-1]
+        out_str += "\n}"
+
+        with open(filepath, 'w', encoding='UTF-8') as file:
+            file.write(out_str)
+
+        return sorted_dict
+
+
+
+
+
+
+    # def organize_png_directories_by_lora_directory(self, parent_directory: str, png_dict: str, lora_dict: str) -> None:
+    #     """Temporary function to organize PNG directories to match the structure of Lora directories."""
+    #     if not os.path.exists(self.output_dir):
+    #         os.makedirs(self.output_dir)
+
+    #     for folder in os.listdir(parent_directory):
+    #         png_info = get_lora_name_and_category_from_png_directory(folder)
+    #         if not png_info:
+    #             continue
+
+    #         lora_name, category = png_info
+    #         found = False
+    #         for category, qualities in png_dict.items():
+    #             for quality, png_entries in qualities.items():
+    #                 target_dir = os.path.join(self.output_dir, f"{category}_{quality}")
+    #                 os.makedirs(target_dir, exist_ok=True)
+    #                 for lora_name, png_path in png_entries:
+    #                     dest_path = os.path.join(target_dir, os.path.basename(png_path))
+    #                     if not os.path.exists(dest_path):
+    #                         try:
+    #                             shutil.copytree(png_path, dest_path)
+    #                             logger.info(f"Copied {png_path} to {dest_path}")
+    #                         except Exception as e:
+    #                             logger.exception(f"Error copying directory: {e}")
+
+    #         if not found:
+    #             print(f"Warning: No matching safetensor found for PNG directory {folder}, {lora_name},{category}/{quality}")
+
+
+    # def move_loras_to_intermediary_by_png_directory(self, png_dict, lora_dict, string_pattern, output_directory) -> None:
+    #     """Based on PNG directories in the directory name specified by string_pattern, move matching loras to the output folder."""
+    #     png_tuples = patch_sub_lists(png_dict, string_pattern)
+    #     logger.debug(json.dumps(lora_dict, indent=2))
+
+    #     for png_tuple in png_tuples:
+    #         lora_name, png_dir_path = png_tuple
+
+

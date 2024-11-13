@@ -18,88 +18,9 @@ transformer = {
 }
 
 
-def get_lora_directory_quality_and_category(subdirectory_name: str) -> tuple:
-    """Function to get the category and type from the safetensor directory name."""
-    # if subdirectory_name[:2] == "__": # Ignore folders that start with double underscore
-    #     return False, False
-    split = subdirectory_name.split("_")
-    split = [item for item in split if item]
-    if len(split) != 2:
-        return False, False
-    category, quality = split
-
-    return (category, quality)
 
 
-def get_png_directory_lora_name_and_category(subdirectory_name: str) -> tuple:
-    """Function to get the lora name and type from the png directory name.\n
-    E.g., "FindForgetYou_v2_Slavic_Dress_Attire_TestCards/FindForgetYou_v2_Slavic_Dress_Attire_TestCards_00002.png" -> (Slavic_Dress, Attire)."""
-    # if subdirectory_name[:2] == "__": # Ignore folders that start with double underscore
-    #     return False
-    match = PNG_DIRECTORY_PATTERN.search(subdirectory_name.replace("_TestCards",""))
-    if match:
-        lora_name = match.group(1)
-        split = lora_name.split("_")
-        category = split.pop()
-        return lora_name, category
-    return False, False
 
-
-def get_directory_quality(subdirectory_name: str) -> str:
-    """Function to get the quality from a lora or png directory name.\n
-    E.g., "S:/Loras/Attire_Good" -> "Good" OR "S:/PNGs/good" -> "Good"."""
-    # if subdirectory_name[:2] == "__": # Ignore folders that start with double underscore
-    #     return False
-    quality_map = {
-        "sfw": "SFW",
-        "scoring": "Scoring",
-        "closeanalysis": "CloseAnalysis",
-        "difficult": "Difficult",
-        "meh": "Meh",
-        "okay": "Okay",
-        "good": "Good",
-        "top": "Top",
-        "toptop": "Best",
-        "best": "Best",
-    }
-
-    base_name = os.path.basename(subdirectory_name.strip("_"))
-    quality = base_name.split("_")[-1].lower()
-    return quality_map.get(quality, None)
-
-
-def get_directory_category(subdirectory_name: str) -> str:
-    """Function to get the category from a lora or png directory name.\n
-    E.g., "S:/Loras/Attire_Good" -> "Good" OR "S:/PNGs/good" -> "Good"."""
-    # if subdirectory_name[:2] == "__": # Ignore folders that start with double underscore
-    #     return False
-    category_map = {
-        "attire": "Attire",
-        "character": "Character",
-        "concept": "Concept",
-        "style": "Style",
-    }
-
-    base_name = os.path.basename(subdirectory_name.strip("_"))
-    category = base_name.split("_")[0].lower()
-    return category_map.get(category, None)
-
-
-def get_lora_name(file_path: str) -> str:
-    """Function to get the lora name from the safetensors file\n
-    E.g., "PONY/Attire_Good/Pony_XL_Slavic_Dress_Attire.safetensors" -> "Slavic_Dress_Attire"."""
-    base_path = os.path.splitext(file_path.strip("_"))[0]
-    base_name = os.path.split(base_path)[-1]
-    if ".safetensors" in file_path:
-        pattern = r'Pony_XL_(.*)'
-        match = re.search(pattern, base_name)
-        if match:
-            lora_name = match.group(1)
-            return lora_name
-    elif "FindForgetYou_v2_" in base_name:
-        lora_name = base_name.replace("FindForgetYou_v2_", "")
-        return lora_name
-    return False
 
 
 def patch_sub_lists(in_dict, specific="") -> list:
@@ -135,78 +56,9 @@ def patch_sub_dicts(in_dict, specific="") -> dict:
     return out_dict
 
 
-def get_path_by_lora_name(dictionary, lora_name):
-    """Traverse the dictionary and find the matching Lora name"""
-    for _category, subcategories in dictionary.items():
-        for _difficulty, loras in subcategories.items():
-            for lora in loras:
-                if lora[0] == lora_name:
-                    return lora[1]
-
-    return "None"
 
 
-def open_to_file(file_path: str) -> None:
-    """If file_path is a directory, it opens the directory. If file_path is a file, it opens the parent directory with the file selected."""
-    if file_path:
-        if os.path.isfile(file_path):
-            subprocess.run(['explorer', '/select,', file_path])
-            return True
-        elif os.path.isdir(file_path):
-            subprocess.run(['explorer', file_path])
-            return True
-    return False
 
 
-def load_json_file(file: str, default=None, relative_path: bool = True):
-    """Reads a json file and returns the json dict, stripping out "//" comments first."""
-    if relative_path:
-        file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), file)
-    else:
-        file_path = file
-    if os.path.exists(file_path):
-        with open(file_path, 'r', encoding='UTF-8') as file:
-            config = re.sub(r"(?:^|\s)//.*", "", file.read(), flags=re.MULTILINE)
-        return json.loads(config)
-    return default
 
 
-def save_json_file(file: str, data: dict, relative_path: bool=True):
-    if relative_path:
-        file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), file)
-    else:
-        file_path = file
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    with open(file_path, 'w', encoding='UTF-8') as file:
-        json.dump(data, file, sort_keys=False, indent=2, separators=(",", ": "))
-
-
-def add_to_json_dictionary(file_path: str, subdicts: list, relative_path: bool=True) -> dict:
-    """Special function to add entries to Ali .json and preserve formatting. Returns updated dictionary.\n\n
-subdicts = [
-    {"loraname": {"TRIGGERS": "", "WEIGHT": "", "NEGATIVES": "", "NULLIFIERS": "", "NOTES": ""}},
-]"""
-    ali_dict = load_json_file(file_path, relative_path)
-
-    for dictionary in subdicts:
-        for key, data in dictionary.items():
-            ali_dict[key] = data
-
-    if relative_path:
-        file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), file_path)
-
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
-    sorted_dict = {key: ali_dict[key] for key in sorted(ali_dict)}
-
-    out_str = "{"
-    for k, v in sorted_dict.items():
-        out_str += f'\n    "{k}": {json.dumps(v, separators=(", ", ": "))},'
-
-    out_str = out_str[:-1]
-    out_str += "\n}"
-
-    with open(file_path, 'w', encoding='UTF-8') as file:
-        file.write(out_str)
-
-    return sorted_dict
