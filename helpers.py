@@ -4,7 +4,7 @@ import os
 ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
 CATEGORIES = ["Attire","Character","Concept","Style"]
-QUALITIES = ["Scoring", "CloseAnalysis", "SFW", "Difficult", "Meh", "Okay", "Good", "Top", "Best"]
+QUALITIES = ["In", "Scoring", "CloseAnalysis", "SFW", "Difficult", "Meh", "Okay", "Good", "Top", "Best"]
 
 helper_logger = logging.getLogger(__name__)
 

@@ -168,6 +168,7 @@ class InfoHandler():
             "top": "Top",
             "toptop": "Best",
             "best": "Best",
+            "in": "In",
         }
 
         base_name = os.path.basename(subdirectory_name.strip("_"))

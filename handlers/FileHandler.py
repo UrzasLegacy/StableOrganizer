@@ -110,7 +110,6 @@ class FileHandler:
         """Create lora model subdirectories."""
         logger.info("Initializing Lora model directories.")
         self._initialize_directories(self.lora_model_dir)
-        self._initialize_directories(self.lora_model_dir)
 
 
     def _initialize_directories(self, parent_dir: str) -> None:
