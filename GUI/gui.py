@@ -138,7 +138,7 @@ class StableOrganizerApp:
                     lora_dir_path = self.info_handler.get_path_by_lora_name(built_lora_dict, lora[0])
                     if png_dir_path and png_dir_path != "None":
                         tags = ["has_imgs"]
-                        if self.info_handler.get_quality_from_filepath(png_dir_path) != self.info_handler.get_quality_from_filepath(lora_dir_path): #TODO compare quality in both paths
+                        if self.info_handler.get_quality_from_filepath(png_dir_path) != self.info_handler.get_quality_from_filepath(lora_dir_path):
                             tags = ["dir_mismatch"]
                     else:
                         tags = ["no_imgs"]
