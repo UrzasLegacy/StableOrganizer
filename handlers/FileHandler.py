@@ -57,14 +57,12 @@ class FileHandler:
     def move(self, source_path, destination_path, quiet=True) -> None:
         """Move file or directory from source to destination."""
         if not os.path.exists(source_path):
-            raise ValueError(f"Source path not found: {source_path}")
+            raise ValueError(f"File not found: {source_path}")
         if source_path == destination_path:
             logger.debug("Cancel move: %s = %s", source_path, destination_path)
             return
         dest_is_dir = os.path.isdir(destination_path)
         dest_exists = os.path.exists(destination_path)
-
-        # Handle destination path
         if dest_exists:
             if dest_is_dir:
                 # Move source into destination directory
@@ -73,7 +71,6 @@ class FileHandler:
                 logging.debug("Move failed! Destination file already exists: %s", destination_path)
                 return
         else:
-            # Create parent directories if they don't exist
             parent_dir = os.path.dirname(destination_path) or '.'
             os.makedirs(parent_dir, exist_ok=True)
             target_path = destination_path
@@ -138,7 +135,7 @@ class FileHandler:
 
 
 
-    def search_in_everything(self, txt):
+    def search_with_everything(self, txt):
         if not self.everything_path:
             raise ValueError("Everything path isn't set.")
         if not os.path.exists(self.everything_path):

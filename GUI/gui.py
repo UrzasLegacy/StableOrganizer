@@ -169,7 +169,7 @@ class StableOrganizerApp:
     def create_context_menu(self) -> None:
         """Create a context menu."""
         self.context_menu = tk.Menu(self.root, tearoff=0)
-        self.context_menu.add_command(label="Search with Everything", command=self.search_in_everything)
+        self.context_menu.add_command(label="Search with Everything", command=self.search_with_everything)
         self.context_menu.add_command(label="Open Lora Parent Folder", command=self.open_lora_parent_directory)
         self.context_menu.add_command(label="Open PNG Directory", command=self.open_png_directory)
         self.context_menu.add_separator()
@@ -273,36 +273,32 @@ class StableOrganizerApp:
         pass
 
 
-    def search_in_everything(self):
+    def search_with_everything(self):
         selected_items = self.tree.selection()
         if len(selected_items):
             name = self.tree.item(selected_items[0],"text")
             if name:
-                self.file_handler.search_in_everything(name)
-
+                self.file_handler.search_with_everything(name)
 
 
     def move_to_quality_directory(self, target_quality) -> None:
+        """Move selections to the target quality node within the appropriate category."""
         selected_items = self.tree.selection()
         parent_sort = set()
-        #selections = [(selection, self.get_full_path(selection)) for selection in selected_items]
         for selection in selected_items:
             selected_path = self.get_full_path(selection)
             category, current_quality, lora_name = selected_path.split('\\')
             if not self.tree.item(selection, "values"): # invalid row selection
                 continue
             item_values = list(self.tree.item(selection, "values"))
-
             current_lora_path = item_values[1]
             current_lora_name = os.path.basename(current_lora_path)
             if DEBUG:
                 logger.debug(f"current_lora_name: {current_lora_path}")
-
             current_png_path = item_values[2]
             current_png_dir = os.path.basename(current_png_path)
             if DEBUG:
                 logger.debug(f"cur_png_dir_path: {current_png_path}")
-
             lora_model_root_path = self.get_setting("lora_model_dir")
             lora_png_root_path = self.get_setting("lora_png_dir")
             lora_target_path = os.path.normpath(os.path.join(lora_model_root_path, f"{category}_{target_quality}", current_lora_name))
@@ -323,14 +319,12 @@ class StableOrganizerApp:
                 self.file_handler.move(current_png_path, lora_png_target_path, quiet=not DEBUG)
                 self.built_png_dict = self.info_handler.build_png_dictionary() #TODO refactor to avoid rebuilding entire dictionary every update
                 item_values[2] = lora_png_target_path
-
             if update_flag:
                 new_parent = self.find_category_quality_node(category, target_quality)
                 self.move_and_update_row(selection, new_parent, tuple(item_values))
                 parent_sort.add(new_parent)
-
         for parent in parent_sort:
-            self.sort_children(parent)
+            self.sort_children_simple(parent)
 
 
     def find_category_quality_node(self, category, quality) -> str | None:
@@ -349,29 +343,6 @@ class StableOrganizerApp:
                     logger.debug("Created treeview category node: %s", new_quality)
                 return new_quality
         return None
-
-
-    def sort_children(self, parent_node, reverse=False) -> None:
-        """Sort treeview."""
-        children = self.tree.get_children(parent_node)
-
-        # Retrieve (item_id, sort_value) pairs
-        children_with_values = [(child, self.tree.item(child, "text")) for child in children]
-
-        # Sort the list of children based on the sort value (alphabetical or numeric)
-        children_with_values.sort(key=lambda x: x[1], reverse=reverse)
-
-        # Re-insert the sorted children
-        for child_id, _ in children_with_values:
-            # Get the item's text and values
-            item_text = self.tree.item(child_id, "text")
-            item_values = self.tree.item(child_id, "values")
-            item_tags = self.tree.item(child_id,"tags")
-            # Remove the item
-            self.tree.delete(child_id)
-
-            # Re-insert it back under the same parent node in sorted order
-            self.tree.insert(parent_node, "end", text=item_text, values=item_values, tags=item_tags)
 
 
     def move_and_update_row(self, selected_item_id, new_parent, new_values) -> None:
@@ -404,7 +375,7 @@ class StableOrganizerApp:
 
 
     def get_full_path(self, item_id) -> str:
-        """Recursively retrieve the full path for a given Treeview item."""
+        """Recursively retrieve the full tree path for a given Treeview item."""
         parent_id = self.tree.parent(item_id)
         if parent_id:
             #parent_text = self.tree.item(parent_id, 'text')
@@ -417,24 +388,51 @@ class StableOrganizerApp:
     #endregion Context Callbacks
 
 #============================================================================================================================================
+    #region                                                         Sort Callbacks                                                         #
+#============================================================================================================================================
+
+    def sort_hierarchy_column(self, col, reverse, key=None, parent=""):
+        """Sort leaf nodes by column."""
+        children = self.tree.get_children(parent)
+        # Determine if we are sorting the special tree column (#0) or a regular column
+        if col == "#0":
+            leaf_nodes = [(self.tree.item(child, "text"), child) for child in children if self.tree.item(child, "values")]
+        else:
+            leaf_nodes = [(self.tree.set(child, col), child) for child in children if self.tree.item(child, "values")]
+        leaf_nodes.sort(key=key, reverse=reverse)
+        for index, (val, leaf) in enumerate(leaf_nodes):
+            self.tree.move(leaf, parent, index)
+        for child in children:
+            if self.tree.get_children(child):  # Only recurse if the child has its own children
+                self.sort_hierarchy_column(col, reverse, key, child)
+        self.tree.heading(col, command=lambda _col=col: self.sort_hierarchy_column(_col, not reverse, key))
+
+
+    def sort_children_simple(self, parent_node, reverse=False) -> None:
+        """Sort children of the parent node."""
+        children = self.tree.get_children(parent_node)
+        children_with_values = [(child, name) for child in children if (name := self.tree.item(child, "text"))]
+        children_with_values.sort(key=lambda x: x[1], reverse=reverse)
+        for index, (child_id, _) in enumerate(children_with_values):
+            self.tree.move(child_id, parent_node, index)
+
+
+    #endregion Sort Callbacks
+
+#============================================================================================================================================
     #region                                                         Search Callbacks                                                         #
 #============================================================================================================================================
 
     def open_search_dialog(self, event=None) -> None:
         """Open a search dialog when Ctrl+F is pressed."""
-        # Create a Toplevel window (popup)
         search_window = tk.Toplevel(self.root)
         search_window.title("Search")
         search_window.geometry("150x100")
-
-        # Label and Entry for the search query
         tk.Label(search_window, text="Search Lora Name:").pack(pady=5)
         search_entry = tk.Entry(search_window)
         search_entry.pack(pady=5)
         search_entry.focus_set()
-
         search_entry.bind("<Return>", lambda event: self.search_and_redraw(search_entry.get()))
-        # Search button
         tk.Button(search_window, text="Search", command=lambda: self.search_and_redraw(search_entry.get())).pack(pady=5)
 
 
@@ -450,37 +448,7 @@ class StableOrganizerApp:
                     matching_qualities[quality] = matching_loras
             if matching_qualities:
                 filtered_lora_dict[category] = matching_qualities
-
-        # Repopulate the Treeview with the filtered data
         self.populate_tree(filtered_lora_dict, self.built_png_dict)
-
-
-    def sort_hierarchy_column(self, col, reverse, key=None, parent=""):
-        # Get the children of the specified parent
-        children = self.tree.get_children(parent)
-
-        # Determine if we are sorting the special tree column (#0) or a regular column
-        if col == "#0":
-            # Retrieve the text of each child for sorting the tree column
-            leaf_nodes = [(self.tree.item(child, "text"), child) for child in children if not self.tree.get_children(child) and self.tree.item(child, "values")]
-        else:
-            # Retrieve the value in the specified column for regular columns
-            leaf_nodes = [(self.tree.set(child, col), child) for child in children if not self.tree.get_children(child) and self.tree.item(child, "values")]
-
-        # Sort only the leaf nodes
-        leaf_nodes.sort(key=key, reverse=reverse)
-
-        # Move each leaf node to its new position under the parent
-        for index, (val, leaf) in enumerate(leaf_nodes):
-            self.tree.move(leaf, parent, index)
-
-        # For each child with its own children, call sort_hierarchy_column recursively without sorting
-        for child in children:
-            if self.tree.get_children(child):  # Only recurse if the child has its own children
-                self.sort_hierarchy_column(col, reverse, key, child)
-
-        # Update the heading command to toggle sorting when the header is clicked
-        self.tree.heading(col, command=lambda _col=col: self.sort_hierarchy_column(_col, not reverse, key))
 
 
     def search_and_highlight(self, search_query) -> None:
@@ -498,10 +466,7 @@ class StableOrganizerApp:
 
     def search_in_tree(self, search_query) -> None:
         """Search for the query in the Treeview and highlight the matching items."""
-        # Clear existing selection
-        self.tree.selection_remove(self.tree.selection())
-
-        # Traverse all items in the Treeview
+        self.tree.selection_remove(self.tree.selection()) # This starter function is just to remove selection first before recursing
         for item in self.tree.get_children():
             self.search_in_subtree(item, search_query)
 
@@ -512,8 +477,6 @@ class StableOrganizerApp:
         if search_query.lower() in self.tree.item(parent, "text").lower():
             self.tree.selection_add(parent)  # Highlight the matching item
             self.tree.see(parent)  # Make sure it's visible
-
-        # Recursively search all children of this parent
         for child in self.tree.get_children(parent):
             self.search_in_subtree(child, search_query)
 
@@ -530,7 +493,6 @@ class StableOrganizerApp:
         item_text = self.tree.item(selected_item, "text")
         values = self.tree.item(selected_item, "values")
         filepath = values[2] if values else None
-
         if item_text and filepath:
             if not self.file_handler.open_to_file(filepath):
                 msgbox.showinfo("Failed", f"No PNG directory exists for: {item_text}", parent=self.root)
@@ -538,14 +500,10 @@ class StableOrganizerApp:
 
     def open_lora_parent_directory(self) -> None:
         """Open Lora Model directory."""
-        # Get the selected item
         selected_item = self.tree.selection()
-
-        # Get the item's text
         item_text = self.tree.item(selected_item, "text")
         values = self.tree.item(selected_item, "values")
         filepath = values[1] if values else None
-
         if item_text and filepath:
             if not self.file_handler.open_to_file(filepath):
                 msgbox.showinfo("Failed", f"No file exists for: {item_text}", parent=self.root)
