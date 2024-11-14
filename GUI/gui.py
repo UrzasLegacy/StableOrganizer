@@ -462,10 +462,10 @@ class StableOrganizerApp:
         # Determine if we are sorting the special tree column (#0) or a regular column
         if col == "#0":
             # Retrieve the text of each child for sorting the tree column
-            leaf_nodes = [(self.tree.item(child, "text"), child) for child in children if not self.tree.get_children(child)]
+            leaf_nodes = [(self.tree.item(child, "text"), child) for child in children if not self.tree.get_children(child) and self.tree.item(child, "values")]
         else:
             # Retrieve the value in the specified column for regular columns
-            leaf_nodes = [(self.tree.set(child, col), child) for child in children if not self.tree.get_children(child)]
+            leaf_nodes = [(self.tree.set(child, col), child) for child in children if not self.tree.get_children(child) and self.tree.item(child, "values")]
 
         # Sort only the leaf nodes
         leaf_nodes.sort(key=key, reverse=reverse)

@@ -68,7 +68,7 @@ class InfoHandler():
                     continue
                 absolute_path = os.path.normpath(os.path.join(folder_path, lora_png_directory))
                 png_directory_dict[category][quality].append((lora_name, absolute_path))
-        return png_directory_dict
+        return self.sort_built_dictionary(png_directory_dict)
 
 
     def get_lora_png_data(self):
@@ -110,7 +110,29 @@ class InfoHandler():
                         continue
                     absolute_path = os.path.normpath(os.path.join(folder_path, file))
                     lora_model_dict[category][quality].append((lora_name, absolute_path))
-        return lora_model_dict
+        return self.sort_built_dictionary(lora_model_dict)
+
+
+    def sort_built_dictionary(self, built_dictionary: dict) -> dict:
+        """Sort the dictionary by category and quality keys."""
+        sorted_lora_directory_dict = {
+            category: {
+                quality: sorted(loras)
+                for quality, loras in sorted(qualities.items(), key=lambda q: self._quality_sort_key(q[0]), reverse=True)
+            }
+            for category, qualities in sorted(built_dictionary.items(), key=lambda q: self._category_sort_key(q[0]), reverse=True)
+        }
+        return sorted_lora_directory_dict
+
+    @staticmethod
+    def _category_sort_key(category):
+        """Use the index in CATEGORIES for sorting; if category is not found, assign a high index."""
+        return CATEGORIES.index(category) if category in CATEGORIES else len(CATEGORIES)
+
+    @staticmethod
+    def _quality_sort_key(quality):
+        """Use the index in QUALITIES for sorting; if quality is not found, assign a high index."""
+        return QUALITIES.index(quality) if quality in QUALITIES else len(QUALITIES)
 
 
     def get_directory_category(self, subdirectory_name: str) -> str:
