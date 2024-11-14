@@ -22,6 +22,7 @@ DEFAULT_CONFIG = {
   "output_dir": None
 }
 
+DEBUG = False
 logger = logging.getLogger(__name__)
 
 class StableOrganizerApp:
@@ -282,11 +283,13 @@ class StableOrganizerApp:
 
             current_lora_path = item_values[1]
             current_lora_name = os.path.basename(current_lora_path)
-            logger.debug(f"current_lora_name: {current_lora_path}")
+            if DEBUG:
+                logger.debug(f"current_lora_name: {current_lora_path}")
 
             current_png_path = item_values[2]
             current_png_dir = os.path.basename(current_png_path)
-            logger.debug(f"cur_png_dir_path: {current_png_path}")
+            if DEBUG:
+                logger.debug(f"cur_png_dir_path: {current_png_path}")
 
             lora_model_root_path = self.get_setting("lora_model_dir")
             lora_png_root_path = self.get_setting("lora_png_dir")
@@ -296,14 +299,16 @@ class StableOrganizerApp:
             update_flag = False
             if current_lora_path != "None" and current_lora_path != lora_target_path:
                 update_flag = True
-                logger.debug(f"Move Lora: {current_lora_path} =====> {lora_target_path}")
-                self.file_handler.move(current_lora_path, lora_target_path)
+                if DEBUG:
+                    logger.debug(f"Move Lora: {current_lora_path} =====> {lora_target_path}")
+                self.file_handler.move(current_lora_path, lora_target_path, quiet=not DEBUG)
                 self.built_lora_dict = self.info_handler.build_lora_dictionary() #TODO refactor to avoid rebuilding entire dictionary every update
                 item_values[1] = lora_target_path
             if current_png_path != "None" and current_png_path != lora_png_target_path:
                 update_flag = True
-                logger.debug(f"Move PNGs: {current_png_path} =====> {lora_png_target_path}")
-                self.file_handler.move(current_png_path, lora_png_target_path)
+                if DEBUG:
+                    logger.debug(f"Move PNGs: {current_png_path} =====> {lora_png_target_path}")
+                self.file_handler.move(current_png_path, lora_png_target_path, quiet=not DEBUG)
                 self.built_png_dict = self.info_handler.build_png_dictionary() #TODO refactor to avoid rebuilding entire dictionary every update
                 item_values[2] = lora_png_target_path
 
@@ -322,11 +327,14 @@ class StableOrganizerApp:
             if self.tree.item(_category, 'text') == category:
                 for _quality in self.tree.get_children(_category):
                     if self.tree.item(_quality, 'text') == quality:
-                        logger.debug("Found treeview category node: %s", quality)
+                        if DEBUG:
+                            logger.debug("Found treeview category node: %s", quality)
                         return _quality
-                logger.debug("Creating treeview category: %s", category)
+                if DEBUG:
+                    logger.debug("Creating treeview category: %s", category)
                 new_quality = self.tree.insert(_category, 0, text=quality)
-                logger.debug("Created treeview category node: %s", new_quality)
+                if DEBUG:
+                    logger.debug("Created treeview category node: %s", new_quality)
                 return new_quality
         return None
 
@@ -384,8 +392,8 @@ class StableOrganizerApp:
             self.tree.insert(new_parent, 'end', text=item_text, values=updated_values, tags=tags)
         else:
             self.tree.insert(new_parent, 'end', text=item_text, values=updated_values)
-
-        print(f"Item moved to {new_parent} and updated with new values: {updated_values}")
+        if DEBUG:
+            print(f"Item moved to {new_parent} and updated with new values: {updated_values}")
 
 
     def get_full_path(self, item_id) -> str:
