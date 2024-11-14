@@ -3,6 +3,7 @@ import logging
 import json
 import shutil
 import subprocess
+import shlex
 import re
 
 from helpers import *
@@ -34,6 +35,7 @@ class FileHandler:
     def __init__(self, config_data: dict = None) -> None:
         self.lora_model_dir = config_data.get('lora_model_dir')
         self.lora_png_dir = config_data.get('lora_png_dir')
+        self.everything_path = config_data.get('everything_path')
         self.output_dir = config_data.get('output_dir')
 
 
@@ -52,7 +54,7 @@ class FileHandler:
                 f.write(json.dumps(ckpt_dict, indent=2))
 
 
-    def move(self, source_path, destination_path) -> None:
+    def move(self, source_path, destination_path, quiet=True) -> None:
         """Move file or directory from source to destination."""
         if not os.path.exists(source_path):
             raise ValueError(f"Source path not found: {source_path}")
@@ -82,7 +84,8 @@ class FileHandler:
 
         try:
             shutil.move(source_path, target_path)
-            logging.debug("Successfully moved %s to %s", source_path, target_path)
+            if not quiet:
+                logging.debug("Successfully moved %s to %s", source_path, target_path)
         except Exception as e:
             logging.exception("Error moving file: %s", e, exc_info=1,  stack_info=True)
             raise
@@ -132,6 +135,16 @@ class FileHandler:
                         logger.info("Created %s directory.", dir_name)
                     except Exception as e:
                         logger.exception("Error creating %s directory: %s", dir_name, e, exc_info=1, stack_info=True)
+
+
+
+    def search_in_everything(self, txt):
+        if not self.everything_path:
+            raise ValueError("Everything path isn't set.")
+        if not os.path.exists(self.everything_path):
+            raise FileNotFoundError("Everything.exe not found at assigned path.")
+        txt = shlex.quote(txt)
+        subprocess.Popen(["cmd", "/c", "start", "", self.everything_path, "-search", txt])
 
 
     @staticmethod
@@ -202,7 +215,6 @@ class FileHandler:
             file.write(out_str)
 
         return sorted_dict
-
 
 
 

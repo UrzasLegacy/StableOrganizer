@@ -169,6 +169,7 @@ class StableOrganizerApp:
     def create_context_menu(self) -> None:
         """Create a context menu."""
         self.context_menu = tk.Menu(self.root, tearoff=0)
+        self.context_menu.add_command(label="Search with Everything", command=self.search_in_everything)
         self.context_menu.add_command(label="Open Lora Parent Folder", command=self.open_lora_parent_directory)
         self.context_menu.add_command(label="Open PNG Directory", command=self.open_png_directory)
         self.context_menu.add_separator()
@@ -270,6 +271,15 @@ class StableOrganizerApp:
 
     def change_config(self):
         pass
+
+
+    def search_in_everything(self):
+        selected_items = self.tree.selection()
+        if len(selected_items):
+            name = self.tree.item(selected_items[0],"text")
+            if name:
+                self.file_handler.search_in_everything(name)
+
 
 
     def move_to_quality_directory(self, target_quality) -> None:
