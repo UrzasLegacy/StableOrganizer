@@ -368,11 +368,6 @@ class StableOrganizerApp:
             print("No item selected")
             return
 
-        parent_id = self.tree.parent(selected_item_id)
-        if parent_id == new_parent:
-            print("Cancel row move.")
-            return
-
         # Get the current item's text and values
         item_text = self.tree.item(selected_item_id, 'text')  # The item's label/text
         item_values = self.tree.item(selected_item_id, 'values')  # The item's associated values
