@@ -230,6 +230,8 @@ class StableOrganizerApp:
 #============================================================================================================================================
 
     def repopulate_tree(self) -> None:
+        self.built_png_dict = self.info_handler.build_png_dictionary()
+        self.built_lora_dict = self.info_handler.build_lora_dictionary()
         self.populate_tree(self.built_lora_dict, self.built_png_dict)
 
 
