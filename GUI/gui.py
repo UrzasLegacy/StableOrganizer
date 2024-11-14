@@ -108,10 +108,10 @@ class StableOrganizerApp:
         self.tree.column("png_path", width=100, stretch=True)  # PNG directory path
 
         # Set headings (this is optional, but useful for understanding columns)
-        self.tree.heading("#0", text="Lora Name", anchor="w")
-        self.tree.heading("lora_path", text="Lora Path", anchor="w")
-        self.tree.heading("png_path", text="PNG Path", anchor="w")
-        self.tree.heading("definition", text="Lora Definition", anchor="w")
+        self.tree.heading("#0", text="Lora Name", anchor="w", command=lambda _col="#0": self.sort_hierarchy_column(_col, False))
+        self.tree.heading("lora_path", text="Lora Path", anchor="w", command=lambda _col="lora_path": self.sort_hierarchy_column(_col, False))
+        self.tree.heading("png_path", text="PNG Path", anchor="w", command=lambda _col="png_path": self.sort_hierarchy_column(_col, False))
+        self.tree.heading("definition", text="Lora Definition", anchor="w", command=lambda _col="definition": self.sort_hierarchy_column(_col, False))
 
         self.tree.pack(side="left", fill="both", expand=True)
         self.tree.tag_configure("has_imgs", background="light cyan")
@@ -441,6 +441,34 @@ class StableOrganizerApp:
 
         # Repopulate the Treeview with the filtered data
         self.populate_tree(filtered_lora_dict, self.built_png_dict)
+
+
+    def sort_hierarchy_column(self, col, reverse, key=None, parent=""):
+        # Get the children of the specified parent
+        children = self.tree.get_children(parent)
+
+        # Determine if we are sorting the special tree column (#0) or a regular column
+        if col == "#0":
+            # Retrieve the text of each child for sorting the tree column
+            leaf_nodes = [(self.tree.item(child, "text"), child) for child in children if not self.tree.get_children(child)]
+        else:
+            # Retrieve the value in the specified column for regular columns
+            leaf_nodes = [(self.tree.set(child, col), child) for child in children if not self.tree.get_children(child)]
+
+        # Sort only the leaf nodes
+        leaf_nodes.sort(key=key, reverse=reverse)
+
+        # Move each leaf node to its new position under the parent
+        for index, (val, leaf) in enumerate(leaf_nodes):
+            self.tree.move(leaf, parent, index)
+
+        # For each child with its own children, call sort_hierarchy_column recursively without sorting
+        for child in children:
+            if self.tree.get_children(child):  # Only recurse if the child has its own children
+                self.sort_hierarchy_column(col, reverse, key, child)
+
+        # Update the heading command to toggle sorting when the header is clicked
+        self.tree.heading(col, command=lambda _col=col: self.sort_hierarchy_column(_col, not reverse, key))
 
 
     def search_and_highlight(self, search_query) -> None:
