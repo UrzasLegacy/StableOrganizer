@@ -125,7 +125,7 @@ class StableOrganizerApp:
     def populate_tree(self, built_lora_dict, built_png_dict) -> None:
         """Populate the treeview with categories, qualities, and Lora names from the built dictionaries."""
         full_definitions = self.file_handler.load_json_file("AliDictionaries.json")
-        lora_definitions = full_definitions.get("lora_dictionary", {})
+        lora_definitions = full_definitions.get("lora", {})
         self.tree.delete(*self.tree.get_children())
 
         for category, qualities in built_lora_dict.items():
