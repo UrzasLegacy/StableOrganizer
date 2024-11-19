@@ -429,19 +429,22 @@ class StableOrganizerApp:
         tk.Button(search_window, text="Search", command=lambda: self.search_and_redraw(search_entry.get())).pack(pady=5)
 
 
-    def search_and_redraw(self, search_query) -> None:
+    def search_and_redraw(self, search_query:str) -> None:
         """Search for the query and redraw the Treeview with only the matches."""
         filtered_lora_dict = {}
+        search_query = search_query.lower()
         self.tree.delete(*self.tree.get_children())
-        for category, qualities in self.built_lora_dict.items():
-            matching_qualities = {}
+        for category, qualities in self.lora_dict.items():
+            if category not in filtered_lora_dict:
+                filtered_lora_dict[category] = {}
             for quality, loras in qualities.items():
-                matching_loras = [lora for lora in loras if search_query.lower() in lora[0].lower()]
-                if matching_loras:
-                    matching_qualities[quality] = matching_loras
-            if matching_qualities:
-                filtered_lora_dict[category] = matching_qualities
-        self.populate_tree(filtered_lora_dict, self.built_png_dict)
+                if quality not in filtered_lora_dict:
+                    filtered_lora_dict[category][quality] = {}
+                for lora_key, lora_paths in loras.items():
+                    if search_query in lora_key.lower():
+                        filtered_lora_dict[category][quality][lora_key] = lora_paths
+
+        self.populate_tree(filtered_lora_dict)
 
 
     def search_and_highlight(self, search_query) -> None:
