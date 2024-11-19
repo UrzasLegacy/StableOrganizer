@@ -303,21 +303,16 @@ class StableOrganizerApp:
             lora_png_root_path = self.get_setting("lora_png_dir")
             lora_target_path = os.path.normpath(os.path.join(lora_model_root_path, f"{category}_{target_quality}", current_lora_name))
             lora_png_target_path = os.path.normpath(os.path.join(lora_png_root_path, f"{category}_{target_quality}", current_png_dir))
-
             update_flag = False
             if current_lora_path != "None" and current_lora_path != lora_target_path:
                 update_flag = True
-                if DEBUG:
-                    logger.debug(f"Move Lora: {current_lora_path} =====> {lora_target_path}")
+                logger.debug(f"Move Lora: {current_lora_path} =====> {lora_target_path}")
                 self.file_handler.move(current_lora_path, lora_target_path, quiet=not DEBUG)
-                self.built_lora_dict = self.info_handler.build_lora_dictionary() #TODO refactor to avoid rebuilding entire dictionary every update
                 item_values[1] = lora_target_path
             if current_png_path != "None" and current_png_path != lora_png_target_path:
                 update_flag = True
-                if DEBUG:
-                    logger.debug(f"Move PNGs: {current_png_path} =====> {lora_png_target_path}")
+                logger.debug(f"Move PNGs: {current_png_path} =====> {lora_png_target_path}")
                 self.file_handler.move(current_png_path, lora_png_target_path, quiet=not DEBUG)
-                self.built_png_dict = self.info_handler.build_png_dictionary() #TODO refactor to avoid rebuilding entire dictionary every update
                 item_values[2] = lora_png_target_path
             if update_flag:
                 new_parent = self.find_category_quality_node(category, target_quality)
