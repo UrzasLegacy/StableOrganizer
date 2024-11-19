@@ -346,32 +346,25 @@ class StableOrganizerApp:
 
 
     def move_and_update_row(self, selected_item_id, new_parent, new_values) -> None:
-        """Move treeview entry and refresh row values."""
+        """Move treeview entries and refresh their values."""
         if not selected_item_id:
-            print("No item selected")
             return
-
-        # Get the current item's text and values
         item_text = self.tree.item(selected_item_id, 'text')  # The item's label/text
         item_values = self.tree.item(selected_item_id, 'values')  # The item's associated values
-
-        # Delete the selected item from the current position
         self.tree.delete(selected_item_id)
-
-        # Modify the values if needed (based on new_values parameter)
-        updated_values = tuple(new_values) if new_values else item_values
-        _, lora_path, png_path = updated_values
+        values = tuple(new_values) if new_values else item_values
+        lora_definition, lora_path, png_path = values
         if png_path and png_path != "None":
-            tags = ("has_imgs",)
+            tags = ["dir_mismatch"] if self.quality_mismatch(lora_path, png_path) else ["has_imgs"]
         else:
-            tags = ("no_imgs",)
-        # Insert the item into a new parent with updated fields
-        if lora_path != "None" and png_path != "None":
-            self.tree.insert(new_parent, 'end', text=item_text, values=updated_values, tags=tags)
-        else:
-            self.tree.insert(new_parent, 'end', text=item_text, values=updated_values)
+            tags = ["no_imgs"]
+        self.tree.insert(new_parent, 'end', text=item_text, values=values, tags=tuple(tags))
         if DEBUG:
-            print(f"Item moved to {new_parent} and updated with new values: {updated_values}")
+            print(f"Item moved to {new_parent} and updated with new values: {values}")
+
+
+    def quality_mismatch(self, model_path, png_path):
+        return self.info_handler.get_quality_from_filepath(model_path) != self.info_handler.get_quality_from_filepath(png_path)
 
 
     def get_full_path(self, item_id) -> str:
