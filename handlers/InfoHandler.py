@@ -10,9 +10,15 @@ from helpers import CATEGORIES, QUALITIES
 ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 logger = logging.getLogger(__name__)
 
-
-
-
+def recursive_fetch(dictionary, key):
+    for k, v in dictionary.items():
+        if k == key:
+            return v
+        if isinstance(v, dict):
+            result = recursive_fetch(v, key)
+            if result is not None:
+                return result
+    return None
 class InfoHandler():
 
 
@@ -44,83 +50,93 @@ class InfoHandler():
         return self.lora_model_dir, self.lora_png_dir, self.output_dir
 
 
-    # def _initialize_directories(self) -> None:
-    #     os.makedirs(self.lora_model_dir, exist_ok=True)
-    #     os.makedirs(self.lora_png_dir, exist_ok=True)
-    #     os.makedirs(self.output_dir, exist_ok=True)
+#region Public Utils
+    def get_unified_lora_dictionary(self) -> dict[str, dict[str, dict[str, tuple[str | None, str | None]]]]:
+        # Initialize a dictionary with the required structure
+        unified_dict = self.initialize_dictionary_template()
+        lora_dict = self.build_lora_dictionary()
+        png_dict = self.build_png_dictionary()
+        for category, qualities in lora_dict.items():
+            for quality, loras in qualities.items():
+                for lora_name, model_path in loras.items():
+                    png_path = recursive_fetch(png_dict, lora_name)
+                    unified_dict[category][quality][lora_name] = (model_path, png_path)
+        return unified_dict
 
 
-    def build_png_dictionary(self) -> dict[str, dict[str, list]]:
+    def build_png_dictionary(self) -> dict[str, dict[str, dict[str, str]]]:
         """Create an organized dictionary of png directories with structure category:quality:[(lora_name, lora_path)]."""
         png_directory_dict = {}
         for folder in os.listdir(self.lora_png_dir):
-            quality = self.get_directory_quality(folder)
+            quality = self._get_directory_quality(folder)
             if not quality:
                 continue
-            category = self.get_directory_category(folder)
+            category = self._get_directory_category(folder)
             if not category:
                 continue
-            png_directory_dict.setdefault(category, {}).setdefault(quality, [])
+            png_directory_dict.setdefault(category, {}).setdefault(quality, {})
             folder_path = os.path.join(self.lora_png_dir, folder)
             for lora_png_directory in os.listdir(folder_path):
-                lora_name, lora_category = self.get_lora_name_and_category_from_png_directory(lora_png_directory)
+                lora_name, lora_category = self._get_lora_name_and_category_from_png_directory(lora_png_directory)
                 if not lora_name:
                     continue
                 absolute_path = os.path.normpath(os.path.join(folder_path, lora_png_directory))
-                png_directory_dict[category][quality].append((lora_name, absolute_path))
-        return self.sort_built_dictionary(png_directory_dict)
+                png_directory_dict[category][quality][lora_name] = absolute_path
+        return self._sort_built_dictionary(png_directory_dict)
 
 
-    def get_lora_png_data(self):
-        """Builds a dictionary of PNG directories organized by category and quality."""
-        png_data = {}
-        for dirpath, dirnames, filenames in os.walk(self.lora_png_dir):
-            for dirname in dirnames:
-                quality = self.get_directory_quality(dirname)
-                if not quality:
-                    continue
-                category = self.get_directory_category(dirname)
-                if not category:
-                    continue
-                dir_path = os.path.join(dirpath, dirname)
-                for subdirectory in os.listdir(dir_path):
-                    lora_name, lora_category = self.get_lora_name_and_category_from_png_directory(subdirectory)
-                    if lora_name and lora_category:
-                        png_path = os.path.join(dir_path, subdirectory)
-                        png_data.setdefault(lora_category, {}).setdefault(quality, []).append((lora_name, png_path))
-        return png_data
-
-
-    def build_lora_dictionary(self) -> dict[str, dict[str, list]]:
+    def build_lora_dictionary(self) -> dict[str, dict[str, dict[str, str]]]:
         """Create an organized dictionary of loras with structure category:quality:[(lora_name, lora_path), ...]"""
         lora_model_dict = {}
         for folder in os.listdir(self.lora_model_dir):
-            quality = self.get_directory_quality(folder)
+            quality = self._get_directory_quality(folder)
             if not quality:
                 continue
-            category = self.get_directory_category(folder)
+            category = self._get_directory_category(folder)
             if not category:
                 continue
-            lora_model_dict.setdefault(category, {}).setdefault(quality, [])
+            lora_model_dict.setdefault(category, {}).setdefault(quality, {})
             folder_path = os.path.join(self.lora_model_dir, folder)
             for file in os.listdir(folder_path):
                 if file.endswith(".safetensors"):
-                    lora_name = self.get_lora_name_from_filepath(file)
+                    lora_name = self._get_lora_name_from_model_filepath(file)
                     if not lora_name:
                         continue
                     absolute_path = os.path.normpath(os.path.join(folder_path, file))
-                    lora_model_dict[category][quality].append((lora_name, absolute_path))
-        return self.sort_built_dictionary(lora_model_dict)
+                    lora_model_dict[category][quality][lora_name] = absolute_path
+        return self._sort_built_dictionary(lora_model_dict)
 
 
-    def sort_built_dictionary(self, built_dictionary: dict) -> dict:
+    @staticmethod
+    def initialize_dictionary_template():
+        return {category: {quality: {} for quality in QUALITIES} for category in CATEGORIES}
+
+
+
+    def find_hanging_png_directories(self):
+        lora_dict = self.build_lora_dictionary()
+        png_dict = self.build_png_dictionary()
+        hanging = []
+        for category, qualities in png_dict.items():
+            for quality, loras in qualities.items():
+                for lora_name, png_path in loras.items():
+                    if not recursive_fetch(lora_dict, lora_name):
+                        hanging.append((lora_name, png_path))
+        if len(hanging):
+            for png_path in hanging:
+                print(f"Hanging PNG directory: {*png_path,}")
+            return True
+        return False
+
+    @staticmethod
+    def _sort_built_dictionary(built_dictionary: dict) -> dict:
         """Sort the dictionary by category and quality keys."""
         sorted_lora_directory_dict = {
             category: {
-                quality: sorted(loras)
-                for quality, loras in sorted(qualities.items(), key=lambda q: self._quality_sort_key(q[0]), reverse=True)
+                quality: dict(sorted(loras.items()))
+                for quality, loras in sorted(qualities.items(), key=lambda q: InfoHandler._quality_sort_key(q[0]), reverse=True)
             }
-            for category, qualities in sorted(built_dictionary.items(), key=lambda q: self._category_sort_key(q[0]), reverse=True)
+            for category, qualities in sorted(built_dictionary.items(), key=lambda q: InfoHandler._category_sort_key(q[0]), reverse=True)
         }
         return sorted_lora_directory_dict
 

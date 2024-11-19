@@ -27,11 +27,12 @@ class FileHandler:
             Move all files within a source directory to a destination directory
         move_all_files(source_dir: str, destination_dir: str) -> None:
             Move all files within a source directory to a destination directory
-        initialize_lora_png_directories() -> None:
-            Create lora png subdirectories.
-        initialize_lora_tensor_directories() -> None:
-            Create lora model subdirectories.
+        initialize_lora_directories() -> None:
+            Create lora model and png subdirectories.
+
     """
+
+#region Init
 
     def __init__(self, config_data: dict = None) -> None:
         self.lora_model_dir = config_data.get('lora_model_dir')
@@ -41,24 +42,19 @@ class FileHandler:
         self.output_dir = config_data.get('output_dir')
 
 
-    def initialize_lora_png_directories(self) -> None:
-        """Create lora png subdirectories."""
-        logger.info("Initializing Lora png directories.")
-        self._initialize_directories(self.lora_png_dir)
+    def initialize_lora_directories(self) -> None:
+        """Create lora subdirectories."""
+        #logger.info("Initializing Lora png directories.")
+        self._initialize_lora_directory(self.lora_png_dir)
+        self._initialize_lora_directory(self.lora_model_dir)
 
 
-    def initialize_lora_model_directories(self) -> None:
-        """Create lora model subdirectories."""
-        logger.info("Initializing Lora model directories.")
-        self._initialize_directories(self.lora_model_dir)
-
-
-    def _initialize_directories(self, parent_dir: str) -> None:
+    def _initialize_lora_directory(self, parent_dir: str) -> None:
         """Create subdirectories by category and quality."""
         if not os.path.exists(parent_dir):
             try:
                 os.makedirs(parent_dir)
-                logger.info("Created %s directory.", parent_dir)
+                #logger.info("Created %s directory.", parent_dir)
             except Exception as e:
                 logger.exception("Error creating %s directory: %s", parent_dir, e, exc_info=1, stack_info=True)
 
@@ -69,11 +65,12 @@ class FileHandler:
                 if not os.path.exists(dir_path):
                     try:
                         os.mkdir(dir_path)
-                        logger.info("Created %s directory.", dir_name)
+                        #logger.info("Created %s directory.", dir_name)
                     except Exception as e:
                         logger.exception("Error creating %s directory: %s", dir_name, e, exc_info=1, stack_info=True)
 
 
+    # Public Utils
     def search_with_everything(self, txt):
         """Search txt with external program: Everything."""
         if not self.everything_path:
@@ -315,19 +312,16 @@ class FileHandler:
 
 
     @staticmethod
-    def log_dicts(png_dict, lora_dict=None, ckpt_dict=None) -> None:
+    def log_dicts(lora_dict, ckpt_dict=None) -> None:
         """Print dictionaries to file for review."""
-        png_log_file_path = os.path.splitext(os.path.abspath(__file__))[0] + "_png_dict.log"
+        png_log_file_path = os.path.splitext(os.path.abspath(__file__))[0] + "_lora_dict.log"
         with open(png_log_file_path,"w") as f:
-            f.write(json.dumps(png_dict, indent=2))
-        if lora_dict:
-            lora_log_file_path = os.path.splitext(os.path.abspath(__file__))[0] + "_lora_dict.log"
-            with open(lora_log_file_path,"w") as f:
-                f.write(json.dumps(lora_dict, indent=2))
+            f.write(json.dumps(lora_dict, indent=2))
         if ckpt_dict:
             ckpt_log_file_path = os.path.splitext(os.path.abspath(__file__))[0] + "_ckpt_dict.log"
             with open(ckpt_log_file_path,"w") as f:
                 f.write(json.dumps(ckpt_dict, indent=2))
+
 
     @staticmethod
     def move(source_path, destination_path, quiet=True) -> None:

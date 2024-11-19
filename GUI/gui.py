@@ -38,8 +38,9 @@ class StableOrganizerApp:
         self.info_handler = InfoHandler(self.config_data)
         self.file_handler = FileHandler(self.config_data)
 
-        self.file_handler.initialize_lora_png_directories()
-        self.file_handler.initialize_lora_model_directories()
+        self.file_handler.initialize_lora_directories()
+
+        self.lora_dict = self.info_handler.get_unified_lora_dictionary()
 
         self.built_png_dict = self.info_handler.build_png_dictionary()
         self.built_lora_dict = self.info_handler.build_lora_dictionary()
@@ -117,32 +118,30 @@ class StableOrganizerApp:
         self.tree.tag_configure("has_imgs", background="light cyan")
         self.tree.tag_configure("no_imgs", background="light yellow")
         self.tree.tag_configure("dir_mismatch", background="sienna3")
-        #self.tree.tag_configure("dir_mismatch", background="orange red")
+        self.tree.tag_configure("no_model", background="red")
 
         vertical_scrollbar.config(command=self.tree.yview)
 
 
-    def populate_tree(self, built_lora_dict, built_png_dict) -> None:
+    def populate_tree(self, lora_dict) -> None:
         """Populate the treeview with categories, qualities, and Lora names from the built dictionaries."""
         full_definitions = self.file_handler.load_json_file("AliDictionaries.json")
         lora_definitions = full_definitions.get("lora", {})
         self.tree.delete(*self.tree.get_children())
 
-        for category, qualities in built_lora_dict.items():
+        for category, qualities in lora_dict.items():
             category_id = self.tree.insert("", "end", text=category)  # Insert category node
             for quality, loras in qualities.items():
                 quality_id = self.tree.insert(category_id, "end", text=quality)  # Insert quality node
-                for lora in loras:
-                    lora_path = lora[1]
-                    png_dir_path = self.info_handler.get_path_by_lora_name(built_png_dict, lora[0])
-                    lora_dir_path = self.info_handler.get_path_by_lora_name(built_lora_dict, lora[0])
-                    if png_dir_path and png_dir_path != "None":
-                        tags = ["has_imgs"]
-                        if self.info_handler.get_quality_from_filepath(png_dir_path) != self.info_handler.get_quality_from_filepath(lora_dir_path):
-                            tags = ["dir_mismatch"]
+                for lora_name, (lora_model_path, lora_png_path) in loras.items():
+                    if lora_model_path and lora_model_path != "None":
+                        if lora_png_path and lora_png_path != "None":
+                            tags = ["dir_mismatch"] if self.quality_mismatch(lora_model_path, lora_png_path) else ["has_imgs"]
+                        else:
+                            tags = ["no_imgs"]
                     else:
-                        tags = ["no_imgs"]
-                    self.tree.insert(quality_id, "end", text=lora[0], values=(lora_definitions.get(lora[0], "None"), lora_path, png_dir_path), tags=tuple(tags))  # Insert Lora name
+                        tags = ["no_model"]
+                    self.tree.insert(quality_id, "end", text=lora_name, values=(lora_definitions.get(lora_name, "None"), lora_model_path, lora_png_path), tags=tuple(tags))  # Insert Lora name
 
 
     def create_menu(self) -> None:
@@ -155,7 +154,7 @@ class StableOrganizerApp:
         file_menu.add_command(label="Log Dicts", command=self.log_dicts)
         file_menu.add_command(label="HashSlingingSlasher", command=self.user_directory)
         file_menu.add_command(label="Config", command=self.change_config)
-
+        file_menu.add_command(label="Find Hanging PNG Directories", command=self.info_handler.find_hanging_png_directories)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit)
 
@@ -248,17 +247,16 @@ class StableOrganizerApp:
 #============================================================================================================================================
 
     def repopulate_tree(self) -> None:
-        self.built_png_dict = self.info_handler.build_png_dictionary()
-        self.built_lora_dict = self.info_handler.build_lora_dictionary()
-        self.populate_tree(self.built_lora_dict, self.built_png_dict)
+        self.lora_dict = self.info_handler.get_unified_lora_dictionary()
+        self.populate_tree(self.lora_dict)
 
 
     def log_dicts(self) -> None:
         """Write dictionaries to file for review."""
-        self.file_handler.log_dicts(self.built_lora_dict, self.built_png_dict)
+        self.file_handler.log_dicts(self.lora_dict)
 
 
-    def user_directory(self) -> str:
+    def get_user_directory(self) -> str:
         """Ask for a directory, and return the file name"""
         return askdirectory()
 
