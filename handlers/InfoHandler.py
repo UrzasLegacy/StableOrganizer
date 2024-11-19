@@ -20,34 +20,38 @@ def recursive_fetch(dictionary, key):
                 return result
     return None
 class InfoHandler():
-
-
     """
-    Container for various functions that return info for the FileHandler class.
-
-
-
-
 
     """
 
-
+#region Init
     def __init__(self, config_data: dict = None) -> None:
-        self.lora_model_dir = config_data.get('lora_model_dir')
-        self.lora_png_dir = config_data.get('lora_png_dir')
-        self.output_dir = config_data.get('output_dir')
+        self.lora_model_dir: str = None
+        self.lora_png_dir: str = None
+        self.ckpt_model_dir: str = None
+        self.ckpt_png_dir: str = None
+        self.output_dir: str = None
+        self.everything_dir: str = None
 
-        self.cq_pattern = None
-        self._init_regex_patterns()
+        self.category_quality_combinations: list = [f"{category}_{quality}" for category, quality in product(CATEGORIES, QUALITIES)]
 
+        self.cat_qual_pattern = self.init_regex_pattern(self.category_quality_combinations)
+        self._init_dirs(config_data)
 
-    def _init_regex_patterns(self):
-        CATEGORY_QUALITY_COMBINATIONS = [f"{category}_{quality}" for category, quality in product(CATEGORIES, QUALITIES)]
-        self.cq_pattern = re.compile("|".join(re.escape(combo) for combo in CATEGORY_QUALITY_COMBINATIONS))
 
 
     def get_dirs(self) -> tuple[str, str, str]:
         return self.lora_model_dir, self.lora_png_dir, self.output_dir
+
+
+    def _init_dirs(self, config_data: dict):
+        self.lora_model_dir: str = config_data.get('lora_model_dir')
+        self.lora_png_dir: str = config_data.get('lora_png_dir')
+        self.ckpt_model_dir: str = config_data.get('ckpt_model_dir')
+        self.ckpt_png_dir: str = config_data.get('ckpt_png_dir')
+        self.output_dir: str = config_data.get('output_dir')
+        self.everything_dir: str = config_data.get('everything_dir')
+
 
 
 #region Public Utils
@@ -128,6 +132,36 @@ class InfoHandler():
             return True
         return False
 
+
+
+
+
+    def get_quality_from_filepath(self, filepath: str) -> str:
+        """Function to get the quality from directory or safetensors/png files.\n
+        E.g., "PONY/Attire_Good/Pony_XL_Slavic_Dress_Attire.safetensors" -> "Good"
+        "X:\CardArchive\LoraCards\Attire_Scoring\FindForgetYou_v2_Slavic_Dress_Attire_TestCards" -> "Good"
+        "X:\CardArchive\LoraCards\Attire_Scoring\FindForgetYou_v2_Slavic_Dress_Attire_TestCards\FindForgetYou_v2_Slavic_Dress_Attire_TestCards_00001.png" -> "Good".
+        """
+
+        match = self.cat_qual_pattern.search(filepath)
+        return match.group() if match else "None"
+
+
+    @staticmethod
+    def get_paths_by_lora_name(dictionary, lora_name) -> str:
+        """Traverse the dictionary and find the matching Lora name."""
+        for _category, qualities in dictionary.items():
+            for _quality, loras in qualities.items():
+                for lora_key, (lora_model_path, lora_png_path) in loras.items():
+                    if lora_key == lora_name:
+                        return lora_model_path, lora_png_path
+        return "None"
+
+    @staticmethod
+    def init_regex_pattern(category_quality_combinations):
+        return re.compile("|".join(category_quality_combinations))
+
+
     @staticmethod
     def _sort_built_dictionary(built_dictionary: dict) -> dict:
         """Sort the dictionary by category and quality keys."""
@@ -151,28 +185,25 @@ class InfoHandler():
         return QUALITIES.index(quality) if quality in QUALITIES else len(QUALITIES)
 
 
-    def get_directory_category(self, subdirectory_name: str) -> str:
+    @staticmethod
+    def _get_directory_category(subdirectory_name: str) -> str:
         """Function to get the category from a lora or png directory name.\n
         E.g., "S:/Loras/Attire_Good" -> "Good" OR "S:/PNGs/good" -> "Good"."""
-        # if subdirectory_name[:2] == "__": # Ignore folders that start with double underscore
-        #     return False
         category_map = {
             "attire": "Attire",
             "character": "Character",
             "concept": "Concept",
             "style": "Style",
         }
-
         base_name = os.path.basename(subdirectory_name.strip("_"))
         category = base_name.split("_")[0].lower()
         return category_map.get(category, None)
 
 
-    def get_directory_quality(self, subdirectory_name: str) -> str:
+    @staticmethod
+    def _get_directory_quality(subdirectory_name: str) -> str:
         """Function to get the quality from a lora or png directory name.\n
         E.g., "S:/Loras/Attire_Good" -> "Good" OR "S:/PNGs/good" -> "Good"."""
-        # if subdirectory_name[:2] == "__": # Ignore folders that start with double underscore
-        #     return False
         quality_map = {
             "sfw": "SFW",
             "scoring": "Scoring",
@@ -186,14 +217,13 @@ class InfoHandler():
             "best": "Best",
             "in": "In",
         }
-
         base_name = os.path.basename(subdirectory_name.strip("_"))
         quality = base_name.split("_")[-1].lower()
         return quality_map.get(quality, None)
 
 
     @staticmethod
-    def get_lora_name_from_filepath(filepath: str) -> str:
+    def _get_lora_name_from_model_filepath(filepath: str) -> str:
         """Function to get the lora name from directory or safetensors/png files.\n
         E.g., "PONY/Attire_Good/Pony_XL_Slavic_Dress_Attire.safetensors" -> "Slavic_Dress_Attire"
         "X:\CardArchive\LoraCards\Attire_Scoring\FindForgetYou_v2_Slavic_Dress_Attire_TestCards" -> "Slavic_Dress_Attire".
@@ -207,6 +237,8 @@ class InfoHandler():
             if match:
                 lora_name = match.group(1)
                 return lora_name
+            else:
+                logger.debug(f"{base_name} is not formatted properly. Missing 'Pony_XL_'")
         elif "FindForgetYou_v2_" in base_name:
             if ".png" in filepath:
                 base_path = os.path.dirname(filepath.strip("_"))
@@ -217,18 +249,7 @@ class InfoHandler():
 
 
     @staticmethod
-    def get_path_by_lora_name(dictionary, lora_name) -> str:
-        """Traverse the dictionary and find the matching Lora name."""
-        for _category, qualities in dictionary.items():
-            for _quality, loras in qualities.items():
-                for lora in loras:
-                    if lora[0] == lora_name:
-                        return lora[1]
-        return "None"
-
-
-    @staticmethod
-    def get_lora_name_and_category_from_png_directory(subdirectory_name: str) -> tuple:
+    def _get_lora_name_and_category_from_png_directory(subdirectory_name: str) -> tuple:
         """Get the lora name and category from the png directory name.\n
         E.g., "FindForgetYou_v2_Slavic_Dress_Attire_TestCards/FindForgetYou_v2_Slavic_Dress_Attire_TestCards" -> (Slavic_Dress, Attire)."""
         # if subdirectory_name[:2] == "__": # Ignore folders that start with double underscore
@@ -243,13 +264,6 @@ class InfoHandler():
         return False, False
 
 
-    def get_quality_from_filepath(self, filepath: str) -> str:
-        """Function to get the quality from directory or safetensors/png files.\n
-        E.g., "PONY/Attire_Good/Pony_XL_Slavic_Dress_Attire.safetensors" -> "Good"
-        "X:\CardArchive\LoraCards\Attire_Scoring\FindForgetYou_v2_Slavic_Dress_Attire_TestCards" -> "Good"
-        "X:\CardArchive\LoraCards\Attire_Scoring\FindForgetYou_v2_Slavic_Dress_Attire_TestCards\FindForgetYou_v2_Slavic_Dress_Attire_TestCards_00001.png" -> "Good".
-        """
-        match = self.cq_pattern.search(filepath)
-        return match.group() if match else "None"
+
 
 

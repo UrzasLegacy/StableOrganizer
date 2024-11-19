@@ -31,7 +31,6 @@ class StableOrganizerApp:
         self.root = root
         self.root.title(f"StableOrganizer v{VERSION}")
         self.root.geometry("1920x1080")
-
         self.config_path = os.path.join(ROOT_DIRECTORY, "config.json")
         self.config_data = self.load_config()
 
@@ -42,14 +41,13 @@ class StableOrganizerApp:
 
         self.lora_dict = self.info_handler.get_unified_lora_dictionary()
 
-        self.built_png_dict = self.info_handler.build_png_dictionary()
-        self.built_lora_dict = self.info_handler.build_lora_dictionary()
+        self.tree_scroll_multiplier = 1
 
         self.create_menu()
         self.create_context_menu()
         self.create_tree()
         self.set_keybinds()
-        self.populate_tree(self.built_lora_dict, self.built_png_dict)
+        self.populate_tree(self.lora_dict)
 
 
 #============================================================================================================================================
@@ -70,8 +68,7 @@ class StableOrganizerApp:
         if os.path.exists(self.config_path):
             config = FileHandler.load_json_file(self.config_path, default={}, relative_path=False)
         else:
-            config = DEFAULT_CONFIG
-            self.save_config(config)
+            self.initialize_default_config()
         return config
 
 
@@ -83,6 +80,10 @@ class StableOrganizerApp:
             config (dict): Settings dictionary
         """
         self.file_handler.save_json_file(self.config_path, config, relative_path=False)
+
+
+    def initialize_default_config(self) -> None:
+        self.save_config(DEFAULT_CONFIG)
 
 
     #endregion Configuration
@@ -147,21 +148,15 @@ class StableOrganizerApp:
     def create_menu(self) -> None:
         """Create a File menu at the top of the window."""
         menubar = tk.Menu(self.root)
-
-        # Create the File menu
         file_menu = tk.Menu(menubar, tearoff=0)
         file_menu.add_command(label="Repopulate Tree", command=self.repopulate_tree)
         file_menu.add_command(label="Log Dicts", command=self.log_dicts)
-        file_menu.add_command(label="HashSlingingSlasher", command=self.user_directory)
+        file_menu.add_command(label="HashSlingingSlasher", command=self.get_user_directory)
         file_menu.add_command(label="Config", command=self.change_config)
         file_menu.add_command(label="Find Hanging PNG Directories", command=self.info_handler.find_hanging_png_directories)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit)
-
-        # Add the File menu to the menubar
         menubar.add_cascade(label="File", menu=file_menu)
-
-        # Display the menubar
         self.root.config(menu=menubar)
 
 

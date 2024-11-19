@@ -1,4 +1,3 @@
-import logging
 import os
 
 ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
@@ -6,7 +5,7 @@ ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 CATEGORIES = ["Attire","Character","Concept","Style"]
 QUALITIES = ["In", "Scoring", "CloseAnalysis", "SFW", "Difficult", "Meh", "Okay", "Good", "Top", "Best"]
 
-helper_logger = logging.getLogger(__name__)
+
 
 
 def patch_sub_lists(in_dict, specific="") -> list:
@@ -22,7 +21,6 @@ def patch_sub_lists(in_dict, specific="") -> list:
 
     recurse(in_dict, specific)
     return out_list
-
 
 def patch_sub_dicts(in_dict, specific="") -> dict:
     """Recursively search in_dict for all keys that contain the specific string. If a matching key's value is a dict, collect all values from it and update them into one out_dict."""
@@ -40,11 +38,4 @@ def patch_sub_dicts(in_dict, specific="") -> dict:
 
     recurse(in_dict, specific)
     return out_dict
-
-
-
-
-
-
-
 
