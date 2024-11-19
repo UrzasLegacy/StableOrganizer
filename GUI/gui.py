@@ -185,16 +185,6 @@ class StableOrganizerApp:
         # self.context_menu.add_cascade(label="Move To", menu=submenu)
 
 
-    def set_keybinds(self) -> None:
-        """Set global keybinds."""
-        # Root binds
-        self.root.bind("<Control-f>", self.on_ctrl_f)
-        self.root.bind("<Escape>", self.on_escape)
-
-        # Tree binds
-        self.tree.bind("<Double-1>", self.on_double_click)
-        self.tree.bind("<Alt-Double-1>", self.on_alt_double_click)
-        self.tree.bind("<Button-3>", self.on_right_click)
 
 
     #endregion Setup Functions
@@ -204,11 +194,26 @@ class StableOrganizerApp:
     #region                                                         Keybinds                                                                #
 #============================================================================================================================================
 
-    def on_double_click(self, event) -> None:
+    def set_keybinds(self) -> None:
+        """Set global keybinds."""
+        # Root binds
+        self.root.bind("<Control-f>", self.on_ctrl_f_keypress)
+        self.root.bind("<Escape>", self.on_escape_keypress)
+
+        # Tree binds
+        self.tree.bind("<Double-1>", self.on_row_double_click_mouse)
+        self.tree.bind("<Alt-Double-1>", self.on_row_alt_double_click_mouse)
+        self.tree.bind("<Button-3>", self.on_row_right_click_mouse)
+        self.tree.bind("<Enter>", self.on_enter_keypress_row)
+        self.tree.bind("<App>", self.on_menu_keypress)
+
+
+    # Mouseclick
+    def on_row_double_click_mouse(self, event) -> None:
         self.open_lora_parent_directory()
 
 
-    def on_alt_double_click(self, event) -> None:
+    def on_row_alt_double_click_mouse(self, event) -> None:
         self.open_png_directory()
 
 
@@ -217,11 +222,16 @@ class StableOrganizerApp:
         self.show_context_menu(event, item_id)
 
 
-    def on_ctrl_f(self, event) -> None:
+    # Keypress
+    def on_enter_keypress_row(self, event) -> None:
+        self.open_png_directory()
+
+
+    def on_ctrl_f_keypress(self, event) -> None:
         self.open_search_dialog()
 
 
-    def on_escape(self, event) -> None:
+    def on_escape_keypress(self, event) -> None:
         self.root.quit()
 
 
