@@ -212,8 +212,9 @@ class StableOrganizerApp:
         self.open_png_directory()
 
 
-    def on_right_click(self, event) -> None:
-        self.show_context_menu(event)
+    def on_row_right_click_mouse(self, event) -> None:
+        item_id = self.tree.identify_row(event.y)
+        self.show_context_menu(event, item_id)
 
 
     def on_ctrl_f(self, event) -> None:
@@ -222,6 +223,12 @@ class StableOrganizerApp:
 
     def on_escape(self, event) -> None:
         self.root.quit()
+
+
+    def on_menu_keypress(self, event):
+        item_id = self.tree.selection()
+        if len(item_id):
+            self.show_context_menu(event, item_id[0])
 
 
     #endregion Keybinds
@@ -252,10 +259,9 @@ class StableOrganizerApp:
     #region                                                       Context Callbacks                                                         #
 #============================================================================================================================================
 
-    def show_context_menu(self, event) -> None:
+    def show_context_menu(self, event, item_id) -> None:
         """Display the right-click context menu."""
         # Get the selected item on right-click
-        item_id = self.tree.identify_row(event.y)
         if item_id:
             selected_items = self.tree.selection()
             if len(selected_items) == 1:
