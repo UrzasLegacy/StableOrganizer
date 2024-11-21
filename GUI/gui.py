@@ -193,6 +193,8 @@ class StableOrganizerApp:
         # Root binds
         self.root.bind("<Control-f>", self.on_ctrl_f_keypress)
         self.root.bind("<Escape>", self.on_escape_keypress)
+        self.root.bind("<Up>", self.select_topmost_visible_leaf)
+        self.root.bind("<Down>", self.select_topmost_visible_leaf)
 
         # Tree binds
         self.tree.bind("<Double-1>", self.on_row_double_click_mouse)
@@ -217,6 +219,42 @@ class StableOrganizerApp:
 
 
     # Keypress
+    def select_topmost_visible_leaf(self, event):
+        """Select the topmost visible leaf node."""
+        if not self.tree.selection():
+            # Find all root-level nodes
+            root_items = self.tree.get_children("")
+            for item in root_items:
+                # Find the first visible leaf node
+                visible_leaf = self.find_visible_leaf(item)
+                if visible_leaf:
+                    # Select and focus the node
+                    self.tree.selection_set(visible_leaf)
+                    self.tree.focus(visible_leaf)
+                    print(f"Selected: {self.tree.item(visible_leaf, 'text')}")
+                    return
+
+
+    def find_visible_leaf(self, item):
+        """
+        Recursively find the first visible leaf node starting from the given item.
+        Ignores collapsed nodes.
+        """
+        # If the item is a leaf node (no children), return it
+        if not self.tree.get_children(item):
+            return item
+
+        # If the item is not expanded, skip its children
+        if not self.tree.item(item, "open"):
+            return None
+
+        # Recursively check children for the first visible leaf node
+        for child in self.tree.get_children(item):
+            visible_leaf = self.find_visible_leaf(child)
+            if visible_leaf:
+                return visible_leaf
+
+        return None
     def on_enter_keypress_row(self, event) -> None:
         self.open_png_directory()
 
@@ -293,6 +331,11 @@ class StableOrganizerApp:
     def move_to_quality_directory(self, target_quality) -> None:
         """Move selections to the target quality node within the appropriate category."""
         selected_items = self.tree.selection()
+        if len(selected_items) > 1:
+            selected_items = sorted(selected_items, key=lambda i_ind: self.tree.index(i_ind))
+        prev_row = self.tree.prev(selected_items[0])
+        next_row = self.tree.next(selected_items[-1])
+        fallback_row = None
         parent_sort = set()
         for selection in selected_items:
             selected_path = self.get_full_path(selection)
@@ -324,11 +367,19 @@ class StableOrganizerApp:
                 self.file_handler.move(current_png_path, lora_png_target_path, quiet=not DEBUG)
                 item_values[2] = lora_png_target_path
             if update_flag:
+                old_parent = self.tree.parent(selection)
                 new_parent = self.find_category_quality_node(category, target_quality)
-                self.move_and_update_row(selection, new_parent, tuple(item_values))
+                updated_selection = self.move_and_update_row(selection, new_parent, tuple(item_values))
+                if old_parent == new_parent:
+                    fallback_row = updated_selection
                 parent_sort.add(new_parent)
         for parent in parent_sort:
             self.sort_children_simple(parent)
+        fallback_row = fallback_row if fallback_row else next_row if next_row else prev_row
+        if fallback_row:
+            self.tree.selection_set(fallback_row)
+            self.tree.focus(fallback_row)
+            self.tree.see(fallback_row)
 
 
     def find_category_quality_node(self, category, quality) -> str | None:
@@ -353,6 +404,9 @@ class StableOrganizerApp:
         """Move treeview entries and refresh their values."""
         if not selected_item_id:
             return
+        save_index = "end"
+        if self.tree.parent(selected_item_id) == new_parent:
+            save_index = self.tree.index(selected_item_id)
         item_text = self.tree.item(selected_item_id, 'text')  # The item's label/text
         item_values = self.tree.item(selected_item_id, 'values')  # The item's associated values
         self.tree.delete(selected_item_id)
@@ -362,10 +416,11 @@ class StableOrganizerApp:
             tags = ["dir_mismatch"] if self.quality_mismatch(lora_path, png_path) else ["has_imgs"]
         else:
             tags = ["no_imgs"]
-        self.tree.insert(new_parent, 'end', text=item_text, values=values, tags=tuple(tags))
+        updated_selection = self.tree.insert(new_parent, save_index, text=item_text, values=values, tags=tuple(tags))
         if DEBUG:
             print(f"Item moved to {new_parent} and updated with new values: {values}")
 
+        return updated_selection
 
     def quality_mismatch(self, model_path, png_path):
         return self.info_handler.get_quality_from_filepath(model_path) != self.info_handler.get_quality_from_filepath(png_path)
