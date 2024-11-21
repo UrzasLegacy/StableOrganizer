@@ -41,8 +41,9 @@ class StableOrganizerApp:
 
         self.lora_dict = self.info_handler.get_unified_lora_dictionary()
 
-        self.tree_scroll_multiplier = 1
+        self.SCROLL_MULTIPLIER = 20
 
+        self.alt_pressed = False
         self.create_menu()
         self.create_context_menu()
         self.create_tree()
@@ -122,6 +123,7 @@ class StableOrganizerApp:
         self.tree.tag_configure("no_model", background="red")
 
         vertical_scrollbar.config(command=self.tree.yview)
+        self.tree.configure(yscrollcommand=vertical_scrollbar.set)
 
 
     def populate_tree(self, lora_dict) -> None:
@@ -193,6 +195,8 @@ class StableOrganizerApp:
         # Root binds
         self.root.bind("<Control-f>", self.on_ctrl_f_keypress)
         self.root.bind("<Escape>", self.on_escape_keypress)
+        self.root.bind("<Alt_L>", self.alt_pressed_keypress) # Keybindings for scroll speed control
+        self.root.bind("<KeyRelease-Alt_L>", self.alt_released_keypress)
         self.root.bind("<Up>", self.select_topmost_visible_leaf)
         self.root.bind("<Down>", self.select_topmost_visible_leaf)
 
@@ -202,6 +206,14 @@ class StableOrganizerApp:
         self.tree.bind("<Button-3>", self.on_row_right_click_mouse)
         self.tree.bind("<Enter>", self.on_enter_keypress_row)
         self.tree.bind("<App>", self.on_menu_keypress)
+        self.tree.bind("<MouseWheel>", self.mouse_wheel_scroll)
+
+
+    def mouse_wheel_scroll(self, event):
+        delta = int(-1 * (event.delta / 120))  # Adjust for platform differences
+        if self.alt_pressed:
+            delta *= self.SCROLL_MULTIPLIER
+        self.tree.yview_scroll(delta, "units")
 
 
     # Mouseclick
@@ -255,6 +267,22 @@ class StableOrganizerApp:
                 return visible_leaf
 
         return None
+
+
+    def alt_pressed_keypress(self, event):
+        """Handle Alt key press to increase scroll speed."""
+        if not self.alt_pressed:
+            self.alt_pressed = True
+            self.scroll_multiplier = 20  # Increase scroll speed
+        return "break"
+
+
+    def alt_released_keypress(self, event):
+        """Handle Alt key release to reset scroll speed."""
+        self.alt_pressed = False
+        self.scroll_multiplier = 1  # Reset to normal scroll speed
+        return "break"
+
     def on_enter_keypress_row(self, event) -> None:
         self.open_png_directory()
 
