@@ -209,7 +209,8 @@ class StableOrganizerApp:
         self.tree.bind("<Double-1>", self.on_row_double_click_mouse)
         self.tree.bind("<Alt-Double-1>", self.on_row_alt_double_click_mouse)
         self.tree.bind("<Button-3>", self.on_row_right_click_mouse)
-        self.tree.bind("<Enter>", self.on_enter_keypress_row)
+        self.tree.bind("<Return>", self.on_enter_keypress_row)
+        self.tree.bind("<Alt-Return>", self.on_alt_enter_keypress_row)
         self.tree.bind("<App>", self.on_menu_keypress)
         self.tree.bind("<MouseWheel>", self.mouse_wheel_scroll)
 
@@ -290,6 +291,10 @@ class StableOrganizerApp:
 
     def on_enter_keypress_row(self, event) -> None:
         self.open_png_directory()
+
+
+    def on_alt_enter_keypress_row(self, event) -> None:
+        self.open_lora_parent_directory()
 
 
     def on_ctrl_f_keypress(self, event) -> None:
