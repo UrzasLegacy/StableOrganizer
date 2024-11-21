@@ -224,11 +224,11 @@ class StableOrganizerApp:
 
     # Mouseclick
     def on_row_double_click_mouse(self, event) -> None:
-        self.open_lora_parent_directory()
+        self.open_png_directory()
 
 
     def on_row_alt_double_click_mouse(self, event) -> None:
-        self.open_png_directory()
+        self.open_lora_parent_directory()
 
 
     def on_row_right_click_mouse(self, event) -> None:

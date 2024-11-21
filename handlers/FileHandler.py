@@ -335,27 +335,25 @@ class FileHandler:
         dest_exists = os.path.exists(destination_path)
         if dest_exists:
             if dest_is_dir:
-                # Move source into destination directory
                 target_path = os.path.join(destination_path, os.path.basename(source_path))
             else:
                 logging.debug("Move failed! Destination file already exists: %s", destination_path)
-                return
+                return False
         else:
             parent_dir = os.path.dirname(destination_path) or '.'
             os.makedirs(parent_dir, exist_ok=True)
             target_path = destination_path
-
         if os.path.exists(target_path):
             logging.debug(f"Move failed! Target path already exists: {target_path}")
-            return
-
+            return False
         try:
             shutil.move(source_path, target_path)
             if not quiet:
                 logging.debug("Successfully moved %s to %s", source_path, target_path)
+            return True
         except Exception as e:
             logging.exception("Error moving file: %s", e, exc_info=1,  stack_info=True)
-            raise
+            return False
 
 
     @staticmethod
