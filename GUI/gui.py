@@ -170,7 +170,12 @@ class StableOrganizerApp:
         self.context_menu.add_command(label="Open PNG Directory", command=self.open_png_directory)
         self.context_menu.add_separator()
         for quality in QUALITIES:
-            self.context_menu.add_command(label=f"Move to {quality}", command=lambda q=quality: self.move_to_quality_directory(q))
+            if quality.lower() == "sfw":
+                acc_key = "f"
+            else:
+                acc_key = quality[0].lower()
+            self.context_menu.add_command(label=f"Move to {quality}", command=lambda q=quality: self.move_to_quality_directory(q), accelerator=acc_key)
+            self.root.bind_all(acc_key, lambda event, q=quality: self.move_to_quality_directory(q))
 
         # Create a submenu
         # submenu = tk.Menu(self.context_menu, tearoff=0)
