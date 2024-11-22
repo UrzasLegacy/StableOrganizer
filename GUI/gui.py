@@ -395,14 +395,24 @@ class StableOrganizerApp:
             lora_png_target_path = os.path.normpath(os.path.join(lora_png_root_path, f"{category}_{target_quality}", current_png_dir))
             update_flag = False
             if current_lora_path != "None" and current_lora_path != lora_target_path:
+                if not os.path.exists(os.path.dirname(lora_target_path)):
+                    print(f"Target dir does not exist: {lora_target_path}")
+                    continue
+                if not self.file_handler.move(current_lora_path, lora_target_path, quiet=not DEBUG):
+                    msgbox.showinfo(f"Move Failed! {current_lora_path} => {lora_target_path}", "No matching Lora names found.")
+                    continue
                 update_flag = True
                 logger.debug(f"Move Lora: {current_lora_path} =====> {lora_target_path}")
-                self.file_handler.move(current_lora_path, lora_target_path, quiet=not DEBUG)
                 item_values[1] = lora_target_path
             if current_png_path != "None" and current_png_path != lora_png_target_path:
+                if not os.path.exists(os.path.dirname(lora_png_target_path)):
+                    print(f"Target dir does not exist: {lora_png_target_path}")
+                    continue
+                if not self.file_handler.move(current_png_path, lora_png_target_path, quiet=not DEBUG):
+                    msgbox.showinfo(f"Move Failed! {current_png_path} => {lora_png_target_path}", "No matching Lora names found.")
+                    continue
                 update_flag = True
                 logger.debug(f"Move PNGs: {current_png_path} =====> {lora_png_target_path}")
-                self.file_handler.move(current_png_path, lora_png_target_path, quiet=not DEBUG)
                 item_values[2] = lora_png_target_path
             if update_flag:
                 old_parent = self.tree.parent(selection)
