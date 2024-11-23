@@ -418,7 +418,7 @@ class StableOrganizerApp:
             if update_flag:
                 old_parent = self.tree.parent(selection)
                 new_parent = self.find_category_quality_node(category, target_quality)
-                updated_selection = self.move_and_update_row(selection, new_parent, tuple(item_values), self.info_handler.cat_qual_pattern)
+                updated_selection = self.move_and_update_row(selection, new_parent, tuple(item_values))
                 if old_parent == new_parent:
                     fallback_row = updated_selection
                 parent_sort.add(new_parent)
