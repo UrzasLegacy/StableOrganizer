@@ -78,22 +78,23 @@ class InfoHandler():
         seen_loras = {}
 
         # Combine all categories
-        all_categories = set(lora_dict.keys()).union(png_dict.keys())
-        for category in sorted(all_categories):
+        #all_categories = set(lora_dict.keys()).union(png_dict.keys())
+        all_categories = sorted(set(lora_dict.keys()).union(png_dict.keys()), key=InfoHandler._category_sort_key)
+        for category in all_categories:
             unified_dict.setdefault(category, {})
             lora_qualities = lora_dict.get(category, {})
             png_qualities = png_dict.get(category, {})
 
             # Combine all qualities
             all_qualities = set(lora_qualities.keys()).union(png_qualities.keys())
-            for quality in sorted(all_qualities):
+            for quality in sorted(all_qualities, key=InfoHandler._quality_sort_key):
                 unified_dict[category].setdefault(quality, {})
                 loras = lora_qualities.get(quality, {})
                 pngs = png_qualities.get(quality, {})
 
                 # Combine all lora names
                 all_lora_names = set(loras.keys()).union(pngs.keys())
-                for lora_name in all_lora_names:
+                for lora_name in sorted(all_lora_names):
                     model_path = loras.get(lora_name)
                     png_path = pngs.get(lora_name)
 
@@ -110,6 +111,57 @@ class InfoHandler():
                     else:
                         # First time seeing this lora_name
                         unified_dict[category][quality][lora_name] = (model_path, png_path)
+
+                        # If this lora_name has a lora file, prioritize this category/quality
+                        if model_path:
+                            seen_loras[lora_name] = (category, quality)
+
+        # Clean up empty qualities
+        for category in list(unified_dict.keys()):
+            for quality in list(unified_dict[category].keys()):
+                if not unified_dict[category][quality]:
+                    del unified_dict[category][quality]
+
+        return unified_dict
+
+
+    def reunify_lora_dictionary(self, dirty_dict) -> dict[str, dict[str, dict[str, tuple[str | None, str | None]]]]:
+        """Create a unified dictionary with all available information in dirty dictionary, prioritizing lora subcategories."""
+        unified_dict = self.initialize_dictionary_template()
+
+        # Track processed loras to avoid duplicates across categories
+        seen_loras = {}
+
+        # Combine all categories
+        all_categories = dirty_dict.keys()
+        for category in all_categories:
+            unified_dict.setdefault(category, {})
+            lora_qualities = dirty_dict.get(category, {})
+
+            # Combine all qualities
+            all_qualities = lora_qualities.keys()
+            for quality in all_qualities:
+                unified_dict[category].setdefault(quality, {})
+                loras = dirty_dict[category].get(quality, {})
+
+                # Combine all lora names
+                all_lora_names = loras.keys()
+                for lora_name in all_lora_names:
+                    model_path, png_path = dirty_dict[category][quality].get(lora_name)
+
+                    # Handle duplicates
+                    if lora_name in seen_loras:
+                        # Merge into the already processed category/quality
+                        existing_category, existing_quality = seen_loras[lora_name]
+                        unified_entry = unified_dict[existing_category][existing_quality][lora_name]
+                        unified_entry = [
+                            unified_entry[0] or model_path,  # Keep the existing model_path or use the new one
+                            unified_entry[1] or png_path,    # Keep the existing png_path or use the new one
+                        ]
+                        unified_dict[existing_category][existing_quality][lora_name] = unified_entry
+                    else:
+                        # First time seeing this lora_name
+                        unified_dict[category][quality][lora_name] = [model_path, png_path]
 
                         # If this lora_name has a lora file, prioritize this category/quality
                         if model_path:
