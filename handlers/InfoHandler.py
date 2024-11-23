@@ -142,7 +142,7 @@ class InfoHandler():
                     continue
                 absolute_path = os.path.normpath(os.path.join(folder_path, lora_png_directory))
                 png_directory_dict[category][quality][lora_name] = absolute_path
-        return self._sort_built_dictionary(png_directory_dict)
+        return self.sort_built_dictionary(png_directory_dict)
 
 
     def build_lora_dictionary(self) -> dict[str, dict[str, dict[str, str]]]:
@@ -164,7 +164,7 @@ class InfoHandler():
                         continue
                     absolute_path = os.path.normpath(os.path.join(folder_path, file))
                     lora_model_dict[category][quality][lora_name] = absolute_path
-        return self._sort_built_dictionary(lora_model_dict)
+        return self.sort_built_dictionary(lora_model_dict)
 
 
     @staticmethod
@@ -231,7 +231,7 @@ class InfoHandler():
 
 
     @staticmethod
-    def _sort_built_dictionary(built_dictionary: dict) -> dict:
+    def sort_built_dictionary(built_dictionary: dict) -> dict:
         """Sort the dictionary by category and quality keys."""
         sorted_lora_directory_dict = {
             category: {

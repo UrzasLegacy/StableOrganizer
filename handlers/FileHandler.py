@@ -8,7 +8,7 @@ import shlex
 import re
 
 from helpers import *
-from handlers.CommandStack import stack, FileMoveCommand
+from handlers.CommandHandler import stack, FileMoveCommand
 
 ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
@@ -328,7 +328,7 @@ class FileHandler:
     def move(source_path, destination_path, quiet=True) -> None:
         """Move file or directory from source to destination."""
         mv_cmd = FileMoveCommand(source_path, destination_path, quiet)
-        result = mv_cmd.do()
+        result = mv_cmd.execute()
         if result:
             stack.push(mv_cmd)
             return True
