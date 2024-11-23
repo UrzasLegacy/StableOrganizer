@@ -1,5 +1,10 @@
+import logging
 import pytest
 from handlers import InfoHandler
+from handlers.CommandHandler import stack, TreeMoveCommand
+
+logging.basicConfig(level=logging.DEBUG)
+
 
 @pytest.fixture
 def mock_data():
@@ -52,17 +57,14 @@ def mock_data():
 
 def test_get_unified_lora_dictionary(mock_data, mocker):
     lora_dict, png_dict, expected_output = mock_data
-
-    # Mock the methods to return mock data.
     mocker.patch('handlers.InfoHandler.InfoHandler.build_lora_dictionary', return_value=lora_dict)
     mocker.patch('handlers.InfoHandler.InfoHandler.build_png_dictionary', return_value=png_dict)
     mocker.patch('handlers.InfoHandler.InfoHandler.initialize_dictionary_template', return_value={})
-
     instance = InfoHandler({})
-
     result = instance.get_unified_lora_dictionary()
 
     assert result == expected_output
+
 
 def test_merge_logic_with_missing_entries(mocker):
     """Test if missing lora or png entries are handled correctly."""
@@ -94,15 +96,13 @@ def test_merge_logic_with_missing_entries(mocker):
             }
         }
     }
+    #lora_dict, png_dict, expected_output = map(InfoHandler.sort_built_dictionary, [lora_dict, png_dict, expected_output])
 
     mocker.patch('handlers.InfoHandler.InfoHandler.build_lora_dictionary', return_value=lora_dict)
     mocker.patch('handlers.InfoHandler.InfoHandler.build_png_dictionary', return_value=png_dict)
     mocker.patch('handlers.InfoHandler.InfoHandler.initialize_dictionary_template', return_value={})
-
     instance = InfoHandler({})
-
     result = instance.get_unified_lora_dictionary()
-
     assert result == expected_output
 
 def test_empty_dictionaries(mocker):
@@ -118,5 +118,61 @@ def test_empty_dictionaries(mocker):
     instance = InfoHandler({})
 
     result = instance.get_unified_lora_dictionary()
+
+    assert result == expected_output
+
+
+def test_merge_orphan_entries_dictionaries(mocker):
+    unified_dict = {
+        "Attire": {
+            "In": {
+                "Bodysuit_Attire": [
+                    "C:\\AliProjects\\StableDiffusion\\StableOrganizerMock\\LoraModels\\Attire_In\\Pony_XL_Bodysuit_Attire.safetensors",
+                    None
+                ]
+            },
+            "SFW": {
+                "Bike_Shorts_Attire": [
+                    "C:\\AliProjects\\StableDiffusion\\StableOrganizerMock\\LoraModels\\Attire_SFW\\Pony_XL_Bike_Shorts_Attire.safetensors",
+                    "C:\\AliProjects\\StableDiffusion\\StableOrganizerMock\\CardArchive\\LoraCards\\Attire_SFW\\FindForgetYou_v2_Bike_Shorts_Attire_TestCards"
+                ]
+            },
+            "Good": {
+                "Bodysuit_Attire": [
+                    None,
+                    "C:\\AliProjects\\StableDiffusion\\StableOrganizerMock\\CardArchive\\LoraCards\\Attire_Good\\FindForgetYou_v2_Bodysuit_Attire_TestCards"
+                ]
+            }
+        },
+        "Character": {},
+        "Concept": {},
+        "Style": {}
+    }
+
+    expected_output = {
+        "Attire": {
+            "In": {
+                "Bodysuit_Attire": [
+                    "C:\\AliProjects\\StableDiffusion\\StableOrganizerMock\\LoraModels\\Attire_In\\Pony_XL_Bodysuit_Attire.safetensors",
+                    "C:\\AliProjects\\StableDiffusion\\StableOrganizerMock\\CardArchive\\LoraCards\\Attire_Good\\FindForgetYou_v2_Bodysuit_Attire_TestCards"
+                ]
+            },
+            "SFW": {
+                "Bike_Shorts_Attire": [
+                    "C:\\AliProjects\\StableDiffusion\\StableOrganizerMock\\LoraModels\\Attire_SFW\\Pony_XL_Bike_Shorts_Attire.safetensors",
+                    "C:\\AliProjects\\StableDiffusion\\StableOrganizerMock\\CardArchive\\LoraCards\\Attire_SFW\\FindForgetYou_v2_Bike_Shorts_Attire_TestCards"
+                ]
+            },
+        },
+        "Character": {},
+        "Concept": {},
+        "Style": {}
+    }
+
+
+    mocker.patch('handlers.InfoHandler.InfoHandler.initialize_dictionary_template', return_value={})
+
+    instance = InfoHandler({})
+    result = instance.reunify_lora_dictionary(unified_dict)
 
     assert result == expected_output
