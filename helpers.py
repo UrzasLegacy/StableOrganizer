@@ -6,8 +6,7 @@ ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 CATEGORIES = ["Attire","Character","Concept","Style"]
 QUALITIES = ["In", "Scoring", "CloseAnalysis", "SFW", "Difficult", "Meh", "Okay", "Good", "Top", "Best"]
 CATEGORY_QUALITY_COMBINATIONS: list = [f"{category}_{quality}" for category, quality in product(CATEGORIES, QUALITIES)]
-CAT_QUAL_PATTERN = re.compile("|".join(CATEGORY_QUALITY_COMBINATIONS))
-
+CAT_QUAL_PATTERN = re.compile(r'\b(' + '|'.join(CATEGORY_QUALITY_COMBINATIONS) + r')\b')
 
 def patch_sub_lists(in_dict, specific="") -> list:
     """Recursively search in_dict for all keys that contain the specific string. If a matching key's value is a list, collect all elements from it and extend them into one out_list."""
