@@ -8,6 +8,7 @@ import shlex
 import re
 
 from helpers import *
+from handlers.CommandStack import stack, FileMoveCommand
 
 ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
@@ -326,34 +327,17 @@ class FileHandler:
     @staticmethod
     def move(source_path, destination_path, quiet=True) -> None:
         """Move file or directory from source to destination."""
-        if not os.path.exists(source_path):
-            raise ValueError(f"File not found: {source_path}")
-        if source_path == destination_path:
-            logger.debug("Cancel move: %s = %s", source_path, destination_path)
-            return
-        dest_is_dir = os.path.isdir(destination_path)
-        dest_exists = os.path.exists(destination_path)
-        if dest_exists:
-            if dest_is_dir:
-                target_path = os.path.join(destination_path, os.path.basename(source_path))
-            else:
-                logging.debug("Move failed! Destination file already exists: %s", destination_path)
-                return False
-        else:
-            parent_dir = os.path.dirname(destination_path) or '.'
-            os.makedirs(parent_dir, exist_ok=True)
-            target_path = destination_path
-        if os.path.exists(target_path):
-            logging.debug(f"Move failed! Target path already exists: {target_path}")
-            return False
-        try:
-            shutil.move(source_path, target_path)
-            if not quiet:
-                logging.debug("Successfully moved %s to %s", source_path, target_path)
+        mv_cmd = FileMoveCommand(source_path, destination_path, quiet)
+        result = mv_cmd.do()
+        if result:
+            stack.push(mv_cmd)
             return True
-        except Exception as e:
-            logging.exception("Error moving file: %s", e, exc_info=1,  stack_info=True)
-            return False
+        return False
+
+    @staticmethod
+    def undo_move() -> None:
+        """Undo last file movement."""
+        stack.undo()
 
 
     @staticmethod

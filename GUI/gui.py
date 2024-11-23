@@ -174,8 +174,8 @@ class StableOrganizerApp:
                 acc_key = "f"
             else:
                 acc_key = quality[0].lower()
-            self.context_menu.add_command(label=f"Move to {quality}", command=lambda q=quality: self.move_to_quality_directory(q), accelerator=acc_key)
-            self.root.bind_all(acc_key, lambda event, q=quality: self.move_to_quality_directory(q))
+            self.context_menu.add_command(label=f"Move to {quality}", command=lambda q=quality: self.move_pair_to_quality_directory(q), accelerator=acc_key)
+            self.root.bind_all(acc_key, lambda event, q=quality: self.move_pair_to_quality_directory(q))
 
         # Create a submenu
         # submenu = tk.Menu(self.context_menu, tearoff=0)
@@ -204,6 +204,7 @@ class StableOrganizerApp:
         self.root.bind("<KeyRelease-Alt_L>", self.alt_released_keypress)
         self.root.bind("<Up>", self.select_topmost_visible_leaf)
         self.root.bind("<Down>", self.select_topmost_visible_leaf)
+        self.root.bind("<Control-z>", self.undo)
 
         # Tree binds
         self.tree.bind("<Double-1>", self.on_row_double_click_mouse)
@@ -366,7 +367,7 @@ class StableOrganizerApp:
                 self.file_handler.search_with_everything(name)
 
 
-    def move_to_quality_directory(self, target_quality) -> None:
+    def move_pair_to_quality_directory(self, target_quality) -> None:
         """Move selections to the target quality node within the appropriate category."""
         selected_items = self.tree.selection()
         if len(selected_items) > 1:
@@ -417,7 +418,7 @@ class StableOrganizerApp:
             if update_flag:
                 old_parent = self.tree.parent(selection)
                 new_parent = self.find_category_quality_node(category, target_quality)
-                updated_selection = self.move_and_update_row(selection, new_parent, tuple(item_values))
+                updated_selection = self.move_and_update_row(selection, new_parent, tuple(item_values), self.info_handler.cat_qual_pattern)
                 if old_parent == new_parent:
                     fallback_row = updated_selection
                 parent_sort.add(new_parent)
@@ -611,5 +612,7 @@ class StableOrganizerApp:
             if not self.file_handler.open_to_file(filepath):
                 msgbox.showinfo("Failed", f"No file exists for: {item_text}", parent=self.root)
 
+    def undo(self, event):
+        self.file_handler.undo_move()
 
     #endregion Misc Callbacks
