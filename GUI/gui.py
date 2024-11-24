@@ -39,7 +39,8 @@ class StableOrganizerApp:
 
         self.file_handler.initialize_lora_directories()
 
-        self.lora_dict = self.info_handler.get_unified_lora_dictionary()
+        self.lora_name_data = self.info_handler.collect_lora_name_data()
+        self.lora_dict = self.info_handler.get_unified_lora_dictionary(self.lora_name_data)
 
         self.SCROLL_MULTIPLIER = 20
 
@@ -332,7 +333,9 @@ class StableOrganizerApp:
 
     def log_dicts(self) -> None:
         """Write dictionaries to file for review."""
-        self.file_handler.log_dicts(self.info_handler.serialize_output(self.lora_dict))
+        serialized_lora_dict = self.info_handler.serialize_output(self.lora_dict)
+        lora_name_data = self.info_handler.serialize_output(self.lora_name_data)
+        self.file_handler.log_dicts(serialized_lora_dict, lora_name_data)
 
 
     def get_user_directory(self) -> str:
