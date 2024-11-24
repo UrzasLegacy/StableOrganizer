@@ -13,6 +13,7 @@ from helpers import CATEGORIES, QUALITIES
 ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 logger = logging.getLogger(__name__)
 
+
 def recursive_fetch(dictionary, key):
     for k, v in dictionary.items():
         if k == key:
@@ -22,6 +23,8 @@ def recursive_fetch(dictionary, key):
             if result is not None:
                 return result
     return None
+
+
 class InfoHandler():
     """
 
@@ -40,7 +43,6 @@ class InfoHandler():
 
         self.cat_qual_pattern = self.init_regex_pattern(self.category_quality_combinations)
         self._init_dirs(config_data)
-
 
 
     def get_dirs(self) -> tuple[str, str, str]:
@@ -163,12 +165,6 @@ class InfoHandler():
                 del unified_dict[category]
 
         return unified_dict
-
-
-
-
-
-
 
 
     def reunify_lora_dictionary(self, dirty_dict) -> dict[str, dict[str, dict[str, tuple[str | None, str | None]]]]:
@@ -301,7 +297,6 @@ class InfoHandler():
         return False
 
 
-
     def get_quality_from_filepath(self, filepath: str) -> str:
         """Function to get the quality from directory or safetensors/png files.\n
         E.g., "PONY/Attire_Good/Pony_XL_Slavic_Dress_Attire.safetensors" -> "Good"
@@ -429,6 +424,7 @@ class InfoHandler():
             return lora_name, category
         return False, False
 
+
     @staticmethod
     def print_unified_dict(unified_dict):
         """Recursively process and pretty print unified_dict, avoiding double-encoding."""
@@ -449,6 +445,7 @@ class InfoHandler():
         processed_dict = process_element(unified_dict)
 
         return json.dumps(processed_dict, indent=2)
+
 
     @staticmethod
     def serialize_output(output):

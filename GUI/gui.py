@@ -8,7 +8,7 @@ import tkinter.messagebox as msgbox
 from tkinter import ttk
 from tkinter.filedialog import askdirectory
 
-from handlers import InfoHandler, FileHandler
+from handlers import InfoHandler, FileHandler, DuplicateInfo, LoraEntry
 from helpers import QUALITIES
 
 ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -121,6 +121,7 @@ class StableOrganizerApp:
         self.tree.tag_configure("no_imgs", background="light yellow")
         self.tree.tag_configure("dir_mismatch", background="sienna3")
         self.tree.tag_configure("no_model", background="red")
+        self.tree.tag_configure("has_duplicates", foreground="red")
 
         vertical_scrollbar.config(command=self.tree.yview)
         self.tree.configure(yscrollcommand=vertical_scrollbar.set)
@@ -131,12 +132,15 @@ class StableOrganizerApp:
         full_definitions = self.file_handler.load_json_file("AliDictionaries.json")
         lora_definitions = full_definitions.get("lora", {})
         self.tree.delete(*self.tree.get_children())
-
         for category, qualities in lora_dict.items():
             category_id = self.tree.insert("", "end", text=category)  # Insert category node
             for quality, loras in qualities.items():
                 quality_id = self.tree.insert(category_id, "end", text=quality)  # Insert quality node
-                for lora_name, (lora_model_path, lora_png_path) in loras.items():
+                for lora_name, lora_entry in loras.items():
+                    lora_entry: LoraEntry
+                    lora_model_path = lora_entry.model_path
+                    lora_png_path = lora_entry.png_path
+                    duplicate_info: list[DuplicateInfo] = lora_entry.duplicates
                     if lora_model_path and lora_model_path != "None":
                         if lora_png_path and lora_png_path != "None":
                             tags = ["dir_mismatch"] if self.quality_mismatch(lora_model_path, lora_png_path) else ["has_imgs"]
@@ -144,6 +148,8 @@ class StableOrganizerApp:
                             tags = ["no_imgs"]
                     else:
                         tags = ["no_model"]
+                    if len(duplicate_info):
+                        tags.append("has_duplicates")
                     self.tree.insert(quality_id, "end", text=lora_name, values=(lora_definitions.get(lora_name, "None"), lora_model_path, lora_png_path), tags=tuple(tags))  # Insert Lora name
 
 
@@ -325,7 +331,7 @@ class StableOrganizerApp:
 
     def log_dicts(self) -> None:
         """Write dictionaries to file for review."""
-        self.file_handler.log_dicts(self.lora_dict)
+        self.file_handler.log_dicts(self.info_handler.serialize_output(self.lora_dict))
 
 
     def get_user_directory(self) -> str:
