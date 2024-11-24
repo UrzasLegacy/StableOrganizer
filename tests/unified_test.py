@@ -416,3 +416,5 @@ def test_png_without_lora_gets_merged_when_lora_is_found(mocker):
     logging.debug(json.dumps(serialized_result,indent=2))
 
     assert serialized_result == serialized_expected
+
+#TODO def test_merge_matching_duplicates(mocker):
