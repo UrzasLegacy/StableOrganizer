@@ -60,88 +60,98 @@ class InfoHandler():
 
 #region Public Utils
 
-    def get_unified_lora_dictionaryOLD(self) -> dict[str, dict[str, dict[str, tuple[str | None, str | None]]]]:
-        """Initialize a dictionary with the required structure, lora model dependent!"""
-        unified_dict = self.initialize_dictionary_template()
-        lora_dict = self.build_lora_dictionary()
-        png_dict = self.build_png_dictionary()
-        for category, qualities in lora_dict.items():
-            for quality, loras in qualities.items():
-                for lora_name, model_path in loras.items():
-                    png_path = recursive_fetch(png_dict, lora_name)
-                    unified_dict[category][quality][lora_name] = (model_path, png_path)
+    def get_unified_lora_dictionary(self, lora_name_data=None) -> dict:
+        """Create a unified dictionary with all available information, merging entries and tracking duplicates."""
+        if not lora_name_data:
+            lora_name_data = self.collect_lora_name_data()
+
+        unified_dict = self._build_unified_dict(lora_name_data)
+        self._cleanup_unified_dict(unified_dict)
+
         return unified_dict
 
 
-    def get_unified_lora_dictionary(self) -> dict:
-        """Create a unified dictionary with all available information, merging entries and tracking duplicates."""
-
+    def collect_lora_name_data(self) -> dict:
+        """Collect data from lora and png dictionaries into a unified mapping."""
         lora_dict = self.build_lora_dictionary()
         png_dict = self.build_png_dictionary()
-
-        # Build a mapping from lora_name to its data
         lora_name_data = {}
-
         # Collect data from lora_dict
         for category, qualities in lora_dict.items():
             for quality, loras in qualities.items():
                 for lora_name, model_path in loras.items():
-                    if lora_name not in lora_name_data:
-                        lora_name_data[lora_name] = {
-                            'model_path': model_path,
-                            'png_path': None,
-                            'category': category,
-                            'quality': quality,
-                            'duplicates': []
-                        }
-                    else:
-                        entry = lora_name_data[lora_name]
-                        # If primary entry lacks model_path, merge it
-                        if entry['model_path'] is None:
-                            entry['model_path'] = model_path
-                            # Update primary location if necessary
-                            entry['category'] = category
-                            entry['quality'] = quality
-                        else:
-                            # Both entries have model_path; add to duplicates
-                            entry['duplicates'].append(DuplicateInfo(
-                                category=category,
-                                quality=quality,
-                                has_model=True,
-                                has_png=False
-                            ))
-
+                    lora_name_data = self._update_lora_entry(
+                        lora_name_data,
+                        lora_name,
+                        model_path=model_path,
+                        png_path=None,
+                        category=category,
+                        quality=quality
+                    )
         # Collect data from png_dict
         for category, qualities in png_dict.items():
             for quality, pngs in qualities.items():
                 for lora_name, png_path in pngs.items():
-                    if lora_name not in lora_name_data:
-                        lora_name_data[lora_name] = {
-                            'model_path': None,
-                            'png_path': png_path,
-                            'category': category,
-                            'quality': quality,
-                            'duplicates': []
-                        }
-                    else:
-                        entry = lora_name_data[lora_name]
-                        # If primary entry lacks png_path, merge it
-                        if entry['png_path'] is None:
-                            entry['png_path'] = png_path
-                            # Update primary location if necessary (only if model_path is None)
-                            if entry['model_path'] is None:
-                                entry['category'] = category
-                                entry['quality'] = quality
-                        else:
-                            # Both entries have png_path; add to duplicates
-                            entry['duplicates'].append(DuplicateInfo(
-                                category=category,
-                                quality=quality,
-                                has_model=False,
-                                has_png=True
-                            ))
+                    lora_name_data = self._update_lora_entry(
+                        lora_name_data,
+                        lora_name,
+                        model_path=None,
+                        png_path=png_path,
+                        category=category,
+                        quality=quality
+                    )
+        return lora_name_data
 
-        # Build unified_dict
+
+    def _update_lora_entry(self, lora_name_data, lora_name, model_path, png_path, category, quality) -> dict:
+        """Update or create an entry for a lora_name in the lora_name_data mapping."""
+        if lora_name not in lora_name_data:
+            lora_name_data[lora_name] = {
+                'model_path': model_path,
+                'png_path': png_path,
+                'category': category,
+                'quality': quality,
+                'duplicates': []
+            }
+        else:
+            entry = lora_name_data[lora_name]
+            # Merge model_path
+            if model_path and entry['model_path'] is None:
+                entry['model_path'] = model_path
+                entry['category'] = category
+                entry['quality'] = quality
+            elif model_path and entry['model_path'] is not None:
+                self._add_or_update_duplicate(entry['duplicates'], category, quality, has_model=True, has_png=False)
+            # Merge png_path
+            if png_path and entry['png_path'] is None:
+                entry['png_path'] = png_path
+                if entry['model_path'] is None:
+                    entry['category'] = category
+                    entry['quality'] = quality
+            elif png_path and entry['png_path'] is not None:
+                self._add_or_update_duplicate(entry['duplicates'], category, quality, has_model=False, has_png=True)
+        return lora_name_data
+
+
+    def _add_or_update_duplicate(self, duplicates, category, quality, has_model, has_png):
+        """Add a new duplicate or update an existing one based on category and quality."""
+        for dup in duplicates:
+            if dup.category == category and dup.quality == quality:
+                # Update existing duplicate
+                dup.has_model = dup.has_model or has_model
+                dup.has_png = dup.has_png or has_png
+                return
+        # Add new duplicate if not found
+        duplicates.append(DuplicateInfo(
+            category=category,
+            quality=quality,
+            has_model=has_model,
+            has_png=has_png
+        ))
+
+
+    def _build_unified_dict(self, lora_name_data) -> dict:
+        """Construct the unified dictionary from the lora_name_data mapping."""
         unified_dict = {}
         for lora_name, data in lora_name_data.items():
             category = data['category']
@@ -155,16 +165,17 @@ class InfoHandler():
                 png_path=data['png_path'],
                 duplicates=data['duplicates']
             )
+        return unified_dict
 
-        # Remove empty qualities and categories
+
+    def _cleanup_unified_dict(self, unified_dict):
+        """Remove empty qualities and categories from the unified dictionary."""
         for category in list(unified_dict.keys()):
             for quality in list(unified_dict[category].keys()):
                 if not unified_dict[category][quality]:
                     del unified_dict[category][quality]
             if not unified_dict[category]:
                 del unified_dict[category]
-
-        return unified_dict
 
 
     def reunify_lora_dictionary(self, dirty_dict) -> dict[str, dict[str, dict[str, tuple[str | None, str | None]]]]:
