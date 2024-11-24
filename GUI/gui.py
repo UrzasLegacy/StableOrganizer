@@ -211,6 +211,7 @@ class StableOrganizerApp:
         self.root.bind("<Up>", self.select_topmost_visible_leaf)
         self.root.bind("<Down>", self.select_topmost_visible_leaf)
         self.root.bind("<Control-z>", self.undo)
+        self.tree.bind("<F1>", self.debug_function)
 
         # Tree binds
         self.tree.bind("<Double-1>", self.on_row_double_click_mouse)
@@ -596,6 +597,14 @@ class StableOrganizerApp:
 #============================================================================================================================================
     #region                                                         Misc Callbacks                                                         #
 #============================================================================================================================================
+
+    def debug_function(self, event):
+        import json
+        s = InfoHandler.serialize_output(self.lora_name_data)
+        p = os.path.join(ROOT_DIRECTORY, "temp.log")
+        with open(p, "w") as f:
+            f.write(json.dumps(s,indent=2))
+
 
     def open_png_directory(self) -> None:
         """Open PNG directory."""
