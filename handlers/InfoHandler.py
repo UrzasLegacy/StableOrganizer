@@ -1,8 +1,9 @@
 import logging
 import os
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, is_dataclass, field, asdict
 from typing import Optional, List, Dict
+import json
 
 from itertools import product
 
@@ -70,71 +71,101 @@ class InfoHandler():
         return unified_dict
 
 
-    def get_unified_lora_dictionary(self) -> dict[str, dict[str, dict[str, tuple[str | None, str | None]]]]:
-        """Create a unified dictionary with all available information, tracking duplicates within unified_dict as a list."""
-        unified_dict = self.initialize_dictionary_template()
+    def get_unified_lora_dictionary(self) -> dict:
+        """Create a unified dictionary with all available information, merging entries and tracking duplicates."""
+
         lora_dict = self.build_lora_dictionary()
         png_dict = self.build_png_dictionary()
 
-        # Track occurrences of lora_names across categories and qualities
-        lora_name_locations = {}
+        # Build a mapping from lora_name to its data
+        lora_name_data = {}
 
-        # Combine all categories
-        all_categories = sorted(set(lora_dict.keys()).union(png_dict.keys()), key=InfoHandler._category_sort_key)
-        for category in all_categories:
-            unified_dict.setdefault(category, {})
-            lora_qualities = lora_dict.get(category, {})
-            png_qualities = png_dict.get(category, {})
-
-            # Combine all qualities
-            all_qualities = set(lora_qualities.keys()).union(png_qualities.keys())
-            for quality in sorted(all_qualities, key=InfoHandler._quality_sort_key):
-                unified_dict[category].setdefault(quality, {})
-                loras = lora_qualities.get(quality, {})
-                pngs = png_qualities.get(quality, {})
-
-                # Combine all lora names
-                all_lora_names = set(loras.keys()).union(pngs.keys())
-                for lora_name in sorted(all_lora_names):
-                    model_path = loras.get(lora_name)
-                    png_path = pngs.get(lora_name)
-
-                    # Initialize the entry if it doesn't exist
-                    if lora_name not in unified_dict[category][quality]:
-                        unified_dict[category][quality][lora_name] = [model_path, png_path, []]
+        # Collect data from lora_dict
+        for category, qualities in lora_dict.items():
+            for quality, loras in qualities.items():
+                for lora_name, model_path in loras.items():
+                    if lora_name not in lora_name_data:
+                        lora_name_data[lora_name] = {
+                            'model_path': model_path,
+                            'png_path': None,
+                            'category': category,
+                            'quality': quality,
+                            'duplicates': []
+                        }
                     else:
-                        # Merge paths if necessary
-                        entry = unified_dict[category][quality][lora_name]
-                        entry[0] = entry[0] or model_path
-                        entry[1] = entry[1] or png_path
+                        entry = lora_name_data[lora_name]
+                        # If primary entry lacks model_path, merge it
+                        if entry['model_path'] is None:
+                            entry['model_path'] = model_path
+                            # Update primary location if necessary
+                            entry['category'] = category
+                            entry['quality'] = quality
+                        else:
+                            # Both entries have model_path; add to duplicates
+                            entry['duplicates'].append(DuplicateInfo(
+                                category=category,
+                                quality=quality,
+                                has_model=True,
+                                has_png=False
+                            ))
 
-                    # Track occurrences
-                    location = (category, quality)
-                    if lora_name in lora_name_locations:
-                        lora_name_locations[lora_name].append(location)
+        # Collect data from png_dict
+        for category, qualities in png_dict.items():
+            for quality, pngs in qualities.items():
+                for lora_name, png_path in pngs.items():
+                    if lora_name not in lora_name_data:
+                        lora_name_data[lora_name] = {
+                            'model_path': None,
+                            'png_path': png_path,
+                            'category': category,
+                            'quality': quality,
+                            'duplicates': []
+                        }
                     else:
-                        lora_name_locations[lora_name] = [location]
+                        entry = lora_name_data[lora_name]
+                        # If primary entry lacks png_path, merge it
+                        if entry['png_path'] is None:
+                            entry['png_path'] = png_path
+                            # Update primary location if necessary (only if model_path is None)
+                            if entry['model_path'] is None:
+                                entry['category'] = category
+                                entry['quality'] = quality
+                        else:
+                            # Both entries have png_path; add to duplicates
+                            entry['duplicates'].append(DuplicateInfo(
+                                category=category,
+                                quality=quality,
+                                has_model=False,
+                                has_png=True
+                            ))
 
-        # Add duplicates information into the unified_dict
-        for lora_name, locations in lora_name_locations.items():
-            if len(locations) > 1:
-                # For each location, add the duplicates list excluding the current location
-                for location in locations:
-                    category, quality = location
-                    duplicates = [loc for loc in locations if loc != location]
-                    unified_dict[category][quality][lora_name][2] = duplicates
-            else:
-                # Ensure duplicates list is empty for lora_names without duplicates
-                category, quality = locations[0]
-                unified_dict[category][quality][lora_name][2] = []
+        # Build unified_dict
+        unified_dict = {}
+        for lora_name, data in lora_name_data.items():
+            category = data['category']
+            quality = data['quality']
+            if category not in unified_dict:
+                unified_dict[category] = {}
+            if quality not in unified_dict[category]:
+                unified_dict[category][quality] = {}
+            unified_dict[category][quality][lora_name] = LoraEntry(
+                model_path=data['model_path'],
+                png_path=data['png_path'],
+                duplicates=data['duplicates']
+            )
 
-        # Clean up empty qualities
+        # Remove empty qualities and categories
         for category in list(unified_dict.keys()):
             for quality in list(unified_dict[category].keys()):
                 if not unified_dict[category][quality]:
                     del unified_dict[category][quality]
+            if not unified_dict[category]:
+                del unified_dict[category]
 
         return unified_dict
+
+
+
 
 
 
@@ -398,11 +429,38 @@ class InfoHandler():
             return lora_name, category
         return False, False
 
+    @staticmethod
+    def print_unified_dict(unified_dict):
+        """Recursively process and pretty print unified_dict, avoiding double-encoding."""
+        def process_element(element):
+            if is_dataclass(element):
+                # Convert dataclass to dictionary
+                return {key: process_element(value) for key, value in element.to_dict().items()}
+            elif isinstance(element, dict):
+                # Process dictionaries
+                return {key: process_element(value) for key, value in element.items()}
+            elif isinstance(element, list):
+                # Process lists
+                return [process_element(item) for item in element]
+            else:
+                # Base case for other types
+                return element
 
+        processed_dict = process_element(unified_dict)
 
+        return json.dumps(processed_dict, indent=2)
 
-
-
+    @staticmethod
+    def serialize_output(output):
+        """Recursively serialize dataclass instances to dictionaries."""
+        if isinstance(output, dict):
+            return {key: InfoHandler.serialize_output(value) for key, value in output.items()}
+        elif isinstance(output, list):
+            return [InfoHandler.serialize_output(item) for item in output]
+        elif hasattr(output, "to_dict"):
+            return output.to_dict()
+        else:
+            return output
 
 
 @dataclass
@@ -412,9 +470,19 @@ class DuplicateInfo:
     has_model: bool
     has_png: bool
 
+    def to_dict(self):
+        return asdict(self)
+
 
 @dataclass
 class LoraEntry:
     model_path: Optional[str]
     png_path: Optional[str]
     duplicates: List[DuplicateInfo] = field(default_factory=list)
+
+    def to_dict(self):
+        return {
+            'model_path': self.model_path,
+            'png_path': self.png_path,
+            'duplicates': [dup.to_dict() for dup in self.duplicates]
+        }
