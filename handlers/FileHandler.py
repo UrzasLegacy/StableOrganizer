@@ -35,8 +35,7 @@ class FileHandler(DataStoreInterface):
     def __init__(self, config_data: dict = None) -> None:
         self.lora_model_dir = config_data.get('lora_model_dir')
         self.lora_png_dir = config_data.get('lora_png_dir')
-        self.everything_path = config_data.get('everything_path')
-        self.model_dictionary_path = config_data.get("model_dictionary_path")
+        self.model_dict_path = config_data.get("model_dict_path")
         self.output_dir = config_data.get('output_dir')
 
 

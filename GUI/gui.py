@@ -3,12 +3,15 @@ VERSION = 0.7
 
 import logging
 import os
+import subprocess
+import shlex
 import tkinter as tk
 import tkinter.messagebox as msgbox
 from tkinter import ttk
 from tkinter.filedialog import askdirectory
 
-from handlers import InfoHandler, FileHandler, DuplicateInfo, LoraEntry
+from handlers import InfoHandler, FileHandler, ModelDictHandler, CommandHandler
+from _dataclasses import LoraEntry, DuplicateInfo
 from helpers import QUALITIES
 
 ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -634,4 +637,14 @@ class StableOrganizerApp:
     def undo(self, event):
         self.file_handler.undo_move()
 
+
+    def search_with_everything(self, txt):
+        """Search txt with external program: Everything."""
+        everything_path = self.config_data.get("everything_path")
+        if not everything_path:
+            raise ValueError("Everything path isn't set.")
+        if not os.path.exists(everything_path):
+            raise FileNotFoundError("Everything.exe not found at assigned path.")
+        txt = shlex.quote(txt)
+        subprocess.Popen(["cmd", "/c", "start", "", everything_path, "-search", txt])
     #endregion Misc Callbacks
