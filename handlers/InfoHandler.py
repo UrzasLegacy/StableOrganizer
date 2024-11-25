@@ -179,7 +179,8 @@ class InfoHandler():
 
 
     def reunify_lora_dictionary(self, dirty_dict) -> dict[str, dict[str, dict[str, tuple[str | None, str | None]]]]:
-        """Create a unified dictionary with all available information in dirty dictionary, prioritizing lora subcategories."""
+        """Not factored to match current unified_dict, but this is intended to be a lighter weight function to
+        organize an already existing dictionary rather than creating a new one."""
         unified_dict = self.initialize_dictionary_template()
 
         # Track processed loras to avoid duplicates across categories
@@ -329,6 +330,7 @@ class InfoHandler():
                         return lora_model_path, lora_png_path
         return "None"
 
+
     @staticmethod
     def init_regex_pattern(category_quality_combinations):
         return re.compile("|".join(category_quality_combinations))
@@ -346,10 +348,12 @@ class InfoHandler():
         }
         return sorted_lora_directory_dict
 
+
     @staticmethod
     def _category_sort_key(category):
         """Use the index in CATEGORIES for sorting; if category is not found, assign a high index."""
         return CATEGORIES.index(category) if category in CATEGORIES else len(CATEGORIES)
+
 
     @staticmethod
     def _quality_sort_key(quality):
