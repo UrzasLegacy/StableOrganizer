@@ -36,7 +36,8 @@ class StableOrganizerApp:
 
         self.info_handler = InfoHandler(self.config_data)
         self.file_handler = FileHandler(self.config_data)
-
+        self.model_dict_handler = ModelDictHandler(self.file_handler, self.config_data)
+        #self.command_handler = CommandHandler()
         self.file_handler.initialize_lora_directories()
 
         self.lora_name_data = self.info_handler.collect_lora_name_data()
