@@ -3,8 +3,10 @@ import os
 import re
 import json
 
+from dataclasses import is_dataclass
 from itertools import product
 
+from _dataclasses import LoraEntry, DuplicateInfo
 from helpers import CATEGORIES, QUALITIES
 
 

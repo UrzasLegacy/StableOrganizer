@@ -8,7 +8,7 @@ import re
 
 from helpers import CATEGORIES, QUALITIES, ROOT_DIRECTORY
 from handlers.CommandHandler import stack, FileMoveCommand
-from handlers import DataStoreInterface#, CommandHandler
+from handlers import DataStoreInterface, CommandHandler
 logger = logging.getLogger(__name__)
 
 
@@ -32,12 +32,12 @@ class FileHandler(DataStoreInterface):
 
 #region Setup
 
-    def __init__(self, config_data: dict = None) -> None:
+    def __init__(self, config_data: dict = None) -> None: #, command_handler: CommandHandler
         self.lora_model_dir = config_data.get('lora_model_dir')
         self.lora_png_dir = config_data.get('lora_png_dir')
         self.model_dict_path = config_data.get("model_dict_path")
         self.output_dir = config_data.get('output_dir')
-
+        #self.command_handler = command_handler
 
     def initialize_lora_directories(self) -> None:
         """Create lora subdirectories."""
@@ -88,24 +88,21 @@ class FileHandler(DataStoreInterface):
                 f.write(json.dumps(ckpt_dict, indent=2))
 
 
-    @staticmethod
-    def move(source_path, destination_path, quiet=True) -> None:
+    def move(self, source_path, destination_path, quiet=True) -> None:
         """Move file or directory from source to destination."""
-        mv_cmd = FileMoveCommand(source_path, destination_path, quiet)
+        mv_cmd = self.command_handler.FileMoveCommand(source_path, destination_path, quiet)
         result = mv_cmd.execute()
         if result:
             stack.push(mv_cmd)
             return True
         return False
 
-    @staticmethod
-    def undo_move() -> None:
+    def undo_move(self) -> None:
         """Undo last file movement."""
         stack.undo()
 
 
-    @staticmethod
-    def move_all_files(source_dir: str, destination_dir: str) -> None:
+    def move_all_files(self, source_dir: str, destination_dir: str) -> None:
         """Move all files within a source directory to a destination directory."""
         os.makedirs(destination_dir, exist_ok=True)
         for filename in os.listdir(source_dir):
@@ -117,8 +114,7 @@ class FileHandler(DataStoreInterface):
                 shutil.move(src_file_path, dst_file_path)
 
 
-    @staticmethod
-    def open_to_file(filepath: str) -> None:
+    def open_to_file(self, filepath: str) -> None:
         """If filepath is a directory, it opens the directory. If filepath is a file, it opens the parent directory with the file selected."""
         if filepath:
             if os.path.isfile(filepath):
@@ -130,8 +126,7 @@ class FileHandler(DataStoreInterface):
         return False
 
 
-    @staticmethod
-    def load_json_file(file: str, default=None, relative_path: bool = True):
+    def load_json_file(self, file: str, default=None, relative_path: bool = True):
         """Reads a json file and returns the json dict, stripping out "//" comments first."""
         if relative_path:
             filepath = os.path.join(os.path.dirname(os.path.realpath(ROOT_DIRECTORY)), file)
@@ -144,13 +139,12 @@ class FileHandler(DataStoreInterface):
         return default
 
 
-    @staticmethod
-    def save_json_file(file: str, data: dict|str, relative_path: bool=True, preserve_string: bool=False):
+    def save_json_file(self, filepath: str, data: dict|str, relative_path: bool=False, preserve_string: bool=False):
         """Save a dictionary or string to a JSON file, creating directories if needed."""
         if relative_path:
-            filepath = os.path.join(os.path.dirname(os.path.realpath(ROOT_DIRECTORY)), file)
+            filepath = os.path.join(os.path.dirname(os.path.realpath(ROOT_DIRECTORY)), filepath)
         else:
-            filepath = file
+            filepath = filepath
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, 'w', encoding='UTF-8') as file:
             if not preserve_string:

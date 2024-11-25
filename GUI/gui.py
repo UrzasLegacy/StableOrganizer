@@ -72,7 +72,7 @@ class StableOrganizerApp:
             dict: Settings dictionary.
         """
         if os.path.exists(self.config_path):
-            config = FileHandler.load_json_file(self.config_path, default={}, relative_path=False)
+            config = self.file_handler.load_json_file(self.config_path, default={}, relative_path=False)
         else:
             self.initialize_default_config()
         return config
@@ -607,7 +607,7 @@ class StableOrganizerApp:
 
     def debug_function(self, event):
         import json
-        s = InfoHandler.serialize_output(self.lora_name_data)
+        s = self.info_handler.serialize_output(self.lora_name_data)
         p = os.path.join(ROOT_DIRECTORY, "temp.log")
         with open(p, "w") as f:
             f.write(json.dumps(s,indent=2))
