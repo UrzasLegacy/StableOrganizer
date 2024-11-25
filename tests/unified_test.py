@@ -9,13 +9,11 @@ ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 log_file_path = os.path.join(ROOT_DIRECTORY, "debugging.log")
 logging.basicConfig(
     level=logging.ERROR,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    handlers=[
-        logging.FileHandler(log_file_path),
-        logging.StreamHandler()
-    ]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[logging.FileHandler(log_file_path), logging.StreamHandler()],
 )
+
 
 def serialize_output(output):
     """Recursively serialize dataclass instances to dictionaries."""
@@ -28,6 +26,7 @@ def serialize_output(output):
     else:
         return output
 
+
 @pytest.fixture
 def mock_data():
     lora_dict = {
@@ -37,7 +36,7 @@ def mock_data():
             },
             "CloseAnalysis": {
                 "T_Shirt_Attire": "C:\\LoraModels\\Attire_CloseAnalysis\\T_Shirt_Attire.safetensors"
-            }
+            },
         }
     }
     png_dict = {
@@ -48,9 +47,7 @@ def mock_data():
             "CloseAnalysis": {
                 "T_Shirt_Attire": "C:\\LoraCards\\Attire_CloseAnalysis\\T_Shirt_Attire_TestCards"
             },
-            "SFW": {
-                "Hat_Attire": "C:\\LoraCards\\Attire_SFW\\Hat_Attire_TestCards"
-            }
+            "SFW": {"Hat_Attire": "C:\\LoraCards\\Attire_SFW\\Hat_Attire_TestCards"},
         }
     }
     expected_output = {
@@ -59,32 +56,40 @@ def mock_data():
                 "Bike_Shorts_Attire": LoraEntry(
                     model_path="C:\\LoraModels\\Attire_In\\Pony_XL_Bike_Shorts_Attire.safetensors",
                     png_path="C:\\LoraCards\\Attire_Scoring\\Bike_Shorts_Attire_TestCards",
-                    duplicates=[]
+                    duplicates=[],
                 )
             },
             "CloseAnalysis": {
                 "T_Shirt_Attire": LoraEntry(
                     model_path="C:\\LoraModels\\Attire_CloseAnalysis\\T_Shirt_Attire.safetensors",
                     png_path="C:\\LoraCards\\Attire_CloseAnalysis\\T_Shirt_Attire_TestCards",
-                    duplicates=[]
+                    duplicates=[],
                 )
             },
             "SFW": {
                 "Hat_Attire": LoraEntry(
                     model_path=None,
                     png_path="C:\\LoraCards\\Attire_SFW\\Hat_Attire_TestCards",
-                    duplicates=[]
+                    duplicates=[],
                 )
-            }
+            },
         }
     }
     return lora_dict, png_dict, expected_output
 
+
 def test_get_unified_lora_dictionary(mock_data, mocker):
     lora_dict, png_dict, expected_output = mock_data
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_lora_dictionary', return_value=lora_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_png_dictionary', return_value=png_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.initialize_dictionary_template', return_value={})
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
+        return_value={},
+    )
     instance = InfoHandler({})
     result = instance.get_unified_lora_dictionary()
 
@@ -92,6 +97,7 @@ def test_get_unified_lora_dictionary(mock_data, mocker):
     serialized_expected = serialize_output(expected_output)
     logging.debug(json.dumps(serialized_result, indent=2))
     assert serialized_result == serialized_expected
+
 
 def test_merge_logic_with_missing_entries(mocker):
     """Test if missing lora or png entries are handled correctly."""
@@ -104,9 +110,7 @@ def test_merge_logic_with_missing_entries(mocker):
     }
     png_dict = {
         "Attire": {
-            "In": {
-                "Hat_Attire": "C:\\LoraCards\\Attire_In\\Hat_Attire_TestCards"
-            }
+            "In": {"Hat_Attire": "C:\\LoraCards\\Attire_In\\Hat_Attire_TestCards"}
         }
     }
     expected_output = {
@@ -115,20 +119,27 @@ def test_merge_logic_with_missing_entries(mocker):
                 "Pants_Attire": LoraEntry(
                     model_path="C:\\LoraModels\\Attire_In\\Pants_Attire.safetensors",
                     png_path=None,
-                    duplicates=[]
+                    duplicates=[],
                 ),
                 "Hat_Attire": LoraEntry(
                     model_path=None,
                     png_path="C:\\LoraCards\\Attire_In\\Hat_Attire_TestCards",
-                    duplicates=[]
-                )
+                    duplicates=[],
+                ),
             }
         }
     }
 
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_lora_dictionary', return_value=lora_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_png_dictionary', return_value=png_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.initialize_dictionary_template', return_value={})
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
+        return_value={},
+    )
 
     instance = InfoHandler({})
     result = instance.get_unified_lora_dictionary()
@@ -138,21 +149,30 @@ def test_merge_logic_with_missing_entries(mocker):
 
     assert serialized_result == serialized_expected
 
+
 def test_empty_dictionaries(mocker):
     """Test with empty lora and png dictionaries."""
     lora_dict = {}
     png_dict = {}
     expected_output = {}
 
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_lora_dictionary', return_value=lora_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_png_dictionary', return_value=png_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.initialize_dictionary_template', return_value={})
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
+        return_value={},
+    )
 
     instance = InfoHandler({})
 
     result = instance.get_unified_lora_dictionary()
 
     assert result == expected_output
+
 
 def test_matching_lora_and_png_in_different_qualities(mocker):
     """Test that LoRA and PNG with the same name in different qualities are merged correctly and duplicates are tracked."""
@@ -176,15 +196,22 @@ def test_matching_lora_and_png_in_different_qualities(mocker):
                 "Bike_Shorts_Attire": LoraEntry(
                     model_path="C:\\LoraModels\\Attire_Difficult\\Pony_XL_Bike_Shorts_Attire.safetensors",
                     png_path="C:\\LoraCards\\Attire_Scoring\\Bike_Shorts_Attire_TestCards",
-                    duplicates=[]
+                    duplicates=[],
                 )
             }
         }
     }
 
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_lora_dictionary', return_value=lora_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_png_dictionary', return_value=png_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.initialize_dictionary_template', return_value={})
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
+        return_value={},
+    )
 
     instance = InfoHandler({})
     result = instance.get_unified_lora_dictionary()
@@ -194,6 +221,7 @@ def test_matching_lora_and_png_in_different_qualities(mocker):
     logging.debug(json.dumps(serialized_result, indent=2))
 
     assert serialized_result == serialized_expected
+
 
 def test_lora_first_in_png_then_in_lora(mocker):
     """Test that a LoRA name first seen in png_dict is correctly merged when found in lora_dict."""
@@ -217,15 +245,22 @@ def test_lora_first_in_png_then_in_lora(mocker):
                 "Bike_Shorts_Attire": LoraEntry(
                     model_path="C:\\LoraModels\\Attire_Difficult\\Bike_Shorts_Attire.safetensors",
                     png_path="C:\\LoraCards\\Attire_In\\Bike_Shorts_Attire_TestCards",
-                    duplicates=[]
+                    duplicates=[],
                 )
             }
         }
     }
 
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_lora_dictionary', return_value=lora_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_png_dictionary', return_value=png_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.initialize_dictionary_template', return_value={})
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
+        return_value={},
+    )
 
     instance = InfoHandler({})
     result = instance.get_unified_lora_dictionary()
@@ -234,6 +269,7 @@ def test_lora_first_in_png_then_in_lora(mocker):
     serialized_expected = serialize_output(expected_output)
 
     assert serialized_result == serialized_expected
+
 
 def test_lora_first_in_lora_then_in_png(mocker):
     """Test that a LoRA name first seen in lora_dict is correctly merged when found in png_dict."""
@@ -257,15 +293,22 @@ def test_lora_first_in_lora_then_in_png(mocker):
                 "T_Shirt_Attire": LoraEntry(
                     model_path="C:\\LoraModels\\Attire_Difficult\\T_Shirt_Attire.safetensors",
                     png_path="C:\\LoraCards\\Attire_Best\\T_Shirt_Attire_TestCards",
-                    duplicates=[]
+                    duplicates=[],
                 )
             }
         }
     }
 
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_lora_dictionary', return_value=lora_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_png_dictionary', return_value=png_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.initialize_dictionary_template', return_value={})
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
+        return_value={},
+    )
 
     instance = InfoHandler({})
     result = instance.get_unified_lora_dictionary()
@@ -274,6 +317,7 @@ def test_lora_first_in_lora_then_in_png(mocker):
     serialized_expected = serialize_output(expected_output)
 
     assert serialized_result == serialized_expected
+
 
 def test_lora_and_png_in_same_quality(mocker):
     """Test that LoRA and PNG with the same name in the same quality are merged correctly."""
@@ -297,15 +341,22 @@ def test_lora_and_png_in_same_quality(mocker):
                 "Hat_Attire": LoraEntry(
                     model_path="C:\\LoraModels\\Attire_Scoring\\Hat_Attire.safetensors",
                     png_path="C:\\LoraCards\\Attire_Scoring\\Hat_Attire_TestCards",
-                    duplicates=[]
+                    duplicates=[],
                 )
             }
         }
     }
 
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_lora_dictionary', return_value=lora_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_png_dictionary', return_value=png_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.initialize_dictionary_template', return_value={})
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
+        return_value={},
+    )
 
     instance = InfoHandler({})
     result = instance.get_unified_lora_dictionary()
@@ -325,7 +376,7 @@ def test_lora_name_in_multiple_qualities(mocker):
             },
             "Scoring": {
                 "Gloves_Attire": "C:\\LoraModels\\Attire_Scoring\\Gloves_Attire.safetensors"
-            }
+            },
         }
     }
     png_dict = {
@@ -346,25 +397,33 @@ def test_lora_name_in_multiple_qualities(mocker):
                             category="Attire",
                             quality="Scoring",
                             has_model=True,
-                            has_png=False
+                            has_png=False,
                         )
-                    ]
+                    ],
                 )
             },
         }
     }
 
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_lora_dictionary', return_value=lora_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_png_dictionary', return_value=png_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.initialize_dictionary_template', return_value={})
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
+        return_value={},
+    )
 
     instance = InfoHandler({})
     result = instance.get_unified_lora_dictionary()
 
     serialized_result = serialize_output(result)
     serialized_expected = serialize_output(expected_output)
-    logging.debug(json.dumps(serialized_result,indent=2))
+    logging.debug(json.dumps(serialized_result, indent=2))
     assert serialized_result == serialized_expected
+
 
 def test_png_without_lora_gets_merged_when_lora_is_found(mocker):
     """Test that a PNG without a LoRA file gets merged correctly when the LoRA file is found later."""
@@ -382,11 +441,11 @@ def test_png_without_lora_gets_merged_when_lora_is_found(mocker):
             },
             "Good": {
                 "Scarf_Attire": "C:\\LoraCards\\Attire_Good\\Scarf_Attire_TestCards"
-            }
+            },
         }
     }
     expected_output = {
-       "Attire": {
+        "Attire": {
             "Difficult": {
                 "Scarf_Attire": {
                     "model_path": "C:\\LoraModels\\Attire_Difficult\\Scarf_Attire.safetensors",
@@ -396,25 +455,33 @@ def test_png_without_lora_gets_merged_when_lora_is_found(mocker):
                             category="Attire",
                             quality="Good",
                             has_model=False,
-                            has_png=True
+                            has_png=True,
                         )
-                    ]
+                    ],
                 }
             }
         }
     }
 
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_lora_dictionary', return_value=lora_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.build_png_dictionary', return_value=png_dict)
-    mocker.patch('handlers.InfoHandler.InfoHandler.initialize_dictionary_template', return_value={})
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+    )
+    mocker.patch(
+        "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
+        return_value={},
+    )
 
     instance = InfoHandler({})
     result = instance.get_unified_lora_dictionary()
 
     serialized_result = serialize_output(result)
     serialized_expected = serialize_output(expected_output)
-    logging.debug(json.dumps(serialized_result,indent=2))
+    logging.debug(json.dumps(serialized_result, indent=2))
 
     assert serialized_result == serialized_expected
 
-#TODO def test_merge_matching_duplicates(mocker):
+
+# TODO def test_merge_matching_duplicates(mocker):

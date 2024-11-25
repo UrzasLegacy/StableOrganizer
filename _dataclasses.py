@@ -1,8 +1,8 @@
 from dataclasses import dataclass, asdict, field
 from typing import Optional, List
 
-#region UnifiedDict
 
+# region UnifiedDict
 @dataclass
 class DuplicateInfo:
     category: str
@@ -13,6 +13,7 @@ class DuplicateInfo:
     def to_dict(self):
         return asdict(self)
 
+
 @dataclass
 class LoraEntry:
     model_path: Optional[str]
@@ -21,13 +22,13 @@ class LoraEntry:
 
     def to_dict(self):
         return {
-            'model_path': self.model_path,
-            'png_path': self.png_path,
-            'duplicates': [dup.to_dict() for dup in self.duplicates]
+            "model_path": self.model_path,
+            "png_path": self.png_path,
+            "duplicates": [dup.to_dict() for dup in self.duplicates],
         }
 
 
-#region ModelDictionaries.json
+# region ModelDictionaries.json
 @dataclass
 class LoraDefinition:
     POSITIVE: Optional[str] = ""
@@ -41,6 +42,7 @@ class LoraDefinition:
 
     def to_dict(self):
         return asdict(self)
+
 
 @dataclass
 class CkptDefinition:

@@ -1,4 +1,5 @@
 """Interface for ModelDictHandler"""
+
 from abc import ABC, abstractmethod
 
 

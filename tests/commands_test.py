@@ -16,6 +16,7 @@ from helpers import *
 
 logging.basicConfig(level=logging.DEBUG)
 
+
 # Helper function to clear the stack before each test
 def clear_stack():
     stack = Stack()
@@ -50,7 +51,7 @@ class FailingCommandMock(Command):
         self.undone = True
 
 
-#region Stack class
+# region Stack class
 def test_stack_singleton():
     stack1 = Stack()
     stack2 = Stack()
@@ -99,6 +100,7 @@ def test_stack_undo_empty():
     stack = Stack()
     import io
     from contextlib import redirect_stdout
+
     f = io.StringIO()
     with redirect_stdout(f):
         stack.undo()
@@ -106,7 +108,7 @@ def test_stack_undo_empty():
     assert "Nothing to undo" in output
 
 
-#region CompositeCommand
+# region CompositeCommand
 def test_composite_command_execute():
     command1 = CommandMock()
     command2 = CommandMock()
@@ -148,21 +150,23 @@ def test_composite_command_execute_with_failure():
     assert command1.undone == True
     # failing_command execution should have failed
     assert failing_command.executed == True
-    assert failing_command.undone == False  # It wasn't undone because it didn't complete
+    assert (
+        failing_command.undone == False
+    )  # It wasn't undone because it didn't complete
     # command3 should not have been executed
     assert command3.executed == False
     assert command3.undone == False
 
 
-#region FileMoveCommand
+# region FileMoveCommand
 def test_file_move_command_execute():
     with tempfile.TemporaryDirectory() as temp_dir:
-        source_file = os.path.join(temp_dir, 'source.txt')
-        destination_dir = os.path.join(temp_dir, 'dest')
-        destination_file = os.path.join(destination_dir, 'source.txt')
+        source_file = os.path.join(temp_dir, "source.txt")
+        destination_dir = os.path.join(temp_dir, "dest")
+        destination_file = os.path.join(destination_dir, "source.txt")
         # Create source file
-        with open(source_file, 'w') as f:
-            f.write('test content')
+        with open(source_file, "w") as f:
+            f.write("test content")
         # Ensure destination directory exists
         os.makedirs(destination_dir)
         command = FileMoveCommand(source_file, destination_dir)
@@ -172,19 +176,19 @@ def test_file_move_command_execute():
         # Check that file exists in destination
         assert os.path.exists(destination_file)
         # Check that content is the same
-        with open(destination_file, 'r') as f:
+        with open(destination_file, "r") as f:
             content = f.read()
-        assert content == 'test content'
+        assert content == "test content"
 
 
 def test_file_move_command_undo():
     with tempfile.TemporaryDirectory() as temp_dir:
-        source_file = os.path.join(temp_dir, 'source.txt')
-        destination_dir = os.path.join(temp_dir, 'dest')
-        destination_file = os.path.join(destination_dir, 'source.txt')
+        source_file = os.path.join(temp_dir, "source.txt")
+        destination_dir = os.path.join(temp_dir, "dest")
+        destination_file = os.path.join(destination_dir, "source.txt")
         # Create source file
-        with open(source_file, 'w') as f:
-            f.write('test content')
+        with open(source_file, "w") as f:
+            f.write("test content")
         # Ensure destination directory exists
         os.makedirs(destination_dir)
         command = FileMoveCommand(source_file, destination_dir)
@@ -199,8 +203,8 @@ def test_file_move_command_undo():
 
 def test_file_move_command_execute_no_source():
     with tempfile.TemporaryDirectory() as temp_dir:
-        source_file = os.path.join(temp_dir, 'nonexistent.txt')
-        destination_dir = os.path.join(temp_dir, 'dest')
+        source_file = os.path.join(temp_dir, "nonexistent.txt")
+        destination_dir = os.path.join(temp_dir, "dest")
         command = FileMoveCommand(source_file, destination_dir)
         with pytest.raises(ValueError) as excinfo:
             command.execute()
@@ -209,9 +213,9 @@ def test_file_move_command_execute_no_source():
 
 def test_file_move_command_execute_same_source_dest():
     with tempfile.TemporaryDirectory() as temp_dir:
-        source_file = os.path.join(temp_dir, 'source.txt')
-        with open(source_file, 'w') as f:
-            f.write('test content')
+        source_file = os.path.join(temp_dir, "source.txt")
+        with open(source_file, "w") as f:
+            f.write("test content")
         command = FileMoveCommand(source_file, source_file)
         with pytest.raises(ValueError) as excinfo:
             command.execute()
@@ -220,14 +224,14 @@ def test_file_move_command_execute_same_source_dest():
 
 def test_file_move_command_execute_dest_exists():
     with tempfile.TemporaryDirectory() as temp_dir:
-        source_file = os.path.join(temp_dir, 'source.txt')
-        destination_file = os.path.join(temp_dir, 'dest.txt')
+        source_file = os.path.join(temp_dir, "source.txt")
+        destination_file = os.path.join(temp_dir, "dest.txt")
         # Create source file
-        with open(source_file, 'w') as f:
-            f.write('test content')
+        with open(source_file, "w") as f:
+            f.write("test content")
         # Create destination file
-        with open(destination_file, 'w') as f:
-            f.write('existing content')
+        with open(destination_file, "w") as f:
+            f.write("existing content")
         command = FileMoveCommand(source_file, destination_file)
         with pytest.raises(FileExistsError) as excinfo:
             command.execute()
@@ -236,16 +240,16 @@ def test_file_move_command_execute_dest_exists():
 
 def test_file_move_command_execute_target_exists():
     with tempfile.TemporaryDirectory() as temp_dir:
-        source_file = os.path.join(temp_dir, 'source.txt')
-        destination_dir = os.path.join(temp_dir, 'dest')
-        destination_file = os.path.join(destination_dir, 'source.txt')
+        source_file = os.path.join(temp_dir, "source.txt")
+        destination_dir = os.path.join(temp_dir, "dest")
+        destination_file = os.path.join(destination_dir, "source.txt")
         # Create source file
-        with open(source_file, 'w') as f:
-            f.write('test content')
+        with open(source_file, "w") as f:
+            f.write("test content")
         # Create destination file at target path
         os.makedirs(destination_dir)
-        with open(destination_file, 'w') as f:
-            f.write('existing content')
+        with open(destination_file, "w") as f:
+            f.write("existing content")
         command = FileMoveCommand(source_file, destination_dir)
         with pytest.raises(FileExistsError) as excinfo:
             command.execute()
@@ -254,11 +258,11 @@ def test_file_move_command_execute_target_exists():
 
 def test_file_move_command_execute_quiet(caplog):
     with tempfile.TemporaryDirectory() as temp_dir:
-        source_file = os.path.join(temp_dir, 'source.txt')
-        destination_dir = os.path.join(temp_dir, 'dest')
+        source_file = os.path.join(temp_dir, "source.txt")
+        destination_dir = os.path.join(temp_dir, "dest")
         # Create source file
-        with open(source_file, 'w') as f:
-            f.write('test content')
+        with open(source_file, "w") as f:
+            f.write("test content")
         # Ensure destination directory exists
         os.makedirs(destination_dir)
         command = FileMoveCommand(source_file, destination_dir, quiet=True)
@@ -270,11 +274,11 @@ def test_file_move_command_execute_quiet(caplog):
 
 def test_file_move_command_execute_logging(caplog):
     with tempfile.TemporaryDirectory() as temp_dir:
-        source_file = os.path.join(temp_dir, 'source.txt')
-        destination_dir = os.path.join(temp_dir, 'dest')
+        source_file = os.path.join(temp_dir, "source.txt")
+        destination_dir = os.path.join(temp_dir, "dest")
         # Create source file
-        with open(source_file, 'w') as f:
-            f.write('test content')
+        with open(source_file, "w") as f:
+            f.write("test content")
         # Ensure destination directory exists
         os.makedirs(destination_dir)
         command = FileMoveCommand(source_file, destination_dir, quiet=False)
@@ -287,19 +291,19 @@ def test_file_move_command_execute_logging(caplog):
 
 def test_file_move_command_undo_source_exists():
     with tempfile.TemporaryDirectory() as temp_dir:
-        source_file = os.path.join(temp_dir, 'source.txt')
-        destination_dir = os.path.join(temp_dir, 'dest')
-        destination_file = os.path.join(destination_dir, 'source.txt')
+        source_file = os.path.join(temp_dir, "source.txt")
+        destination_dir = os.path.join(temp_dir, "dest")
+        destination_file = os.path.join(destination_dir, "source.txt")
         # Create source file
-        with open(source_file, 'w') as f:
-            f.write('test content')
+        with open(source_file, "w") as f:
+            f.write("test content")
         # Ensure destination directory exists
         os.makedirs(destination_dir)
         command = FileMoveCommand(source_file, destination_dir)
         command.execute()
         # Create file at source path to simulate conflict during undo
-        with open(source_file, 'w') as f:
-            f.write('conflicting content')
+        with open(source_file, "w") as f:
+            f.write("conflicting content")
         with pytest.raises(FileExistsError) as excinfo:
             command.undo()
         assert "Cannot undo move: Source file already exists" in str(excinfo.value)
@@ -307,41 +311,43 @@ def test_file_move_command_undo_source_exists():
 
 def test_file_move_command_undo_target_missing():
     with tempfile.TemporaryDirectory() as temp_dir:
-        source_file = os.path.join(temp_dir, 'source.txt')
-        destination_dir = os.path.join(temp_dir, 'dest')
+        source_file = os.path.join(temp_dir, "source.txt")
+        destination_dir = os.path.join(temp_dir, "dest")
         # Create source file
-        with open(source_file, 'w') as f:
-            f.write('test content')
+        with open(source_file, "w") as f:
+            f.write("test content")
         # Ensure destination directory exists
         os.makedirs(destination_dir)
         command = FileMoveCommand(source_file, destination_dir)
         command.execute()
         # Delete target file to simulate missing file
-        destination_file = os.path.join(destination_dir, 'source.txt')
+        destination_file = os.path.join(destination_dir, "source.txt")
         os.remove(destination_file)
         with pytest.raises(ValueError) as excinfo:
             command.undo()
         assert "Undo failed: File does not exist at source" in str(excinfo.value)
 
 
-#region TreeMoveCommand
+# region TreeMoveCommand
 def test_tree_move_command_execute():
     root = tk.Tk()
     root.withdraw()  # Hide the root window
     tree = ttk.Treeview(root)
     # Set up tree
-    parent = tree.insert('', 'end', text='Parent')
-    child = tree.insert(parent, 'end', text='Child', values=('value1', 'value2', 'value3'))
-    new_parent = tree.insert('', 'end', text='New Parent')
+    parent = tree.insert("", "end", text="Parent")
+    child = tree.insert(
+        parent, "end", text="Child", values=("value1", "value2", "value3")
+    )
+    new_parent = tree.insert("", "end", text="New Parent")
     # Create command
-    new_values = ('new_value1', 'new_value2', 'new_value3')
+    new_values = ("new_value1", "new_value2", "new_value3")
     command = TreeMoveCommand(tree, child, new_parent, new_values)
     # Execute command
     command.execute()
     # Check that child is now under new_parent
     assert tree.parent(command.item_id) == new_parent
     # Check that values are updated
-    assert tree.item(command.item_id, 'values') == new_values
+    assert tree.item(command.item_id, "values") == new_values
     root.destroy()
 
 
@@ -350,11 +356,13 @@ def test_tree_move_command_undo():
     root.withdraw()  # Hide the root window
     tree = ttk.Treeview(root)
     # Set up tree
-    parent = tree.insert('', 'end', text='Parent')
-    child = tree.insert(parent, 'end', text='Child', values=('value1', 'value2', 'value3'))
-    new_parent = tree.insert('', 'end', text='New Parent')
+    parent = tree.insert("", "end", text="Parent")
+    child = tree.insert(
+        parent, "end", text="Child", values=("value1", "value2", "value3")
+    )
+    new_parent = tree.insert("", "end", text="New Parent")
     # Create command
-    new_values = ('new_value1', 'new_value2', 'new_value3')
+    new_values = ("new_value1", "new_value2", "new_value3")
     command = TreeMoveCommand(tree, child, new_parent, new_values)
     # Execute command
     command.execute()
@@ -363,7 +371,7 @@ def test_tree_move_command_undo():
     # Check that child is back under original parent
     assert tree.parent(command.item_id) == parent
     # Check that values are restored
-    assert tree.item(command.item_id, 'values') == ('value1', 'value2', 'value3')
+    assert tree.item(command.item_id, "values") == ("value1", "value2", "value3")
     root.destroy()
 
 
@@ -372,9 +380,9 @@ def test_tree_move_command_execute_no_item():
     root.withdraw()
     tree = ttk.Treeview(root)
     # Non-existent item_id
-    item_id = 'nonexistent'
-    new_parent = tree.insert('', 'end', text='New Parent')
-    new_values = ('new_value1', 'new_value2', 'new_value3')
+    item_id = "nonexistent"
+    new_parent = tree.insert("", "end", text="New Parent")
+    new_values = ("new_value1", "new_value2", "new_value3")
     command = None
     with pytest.raises(TclError) as e:
         command = TreeMoveCommand(tree, item_id, new_parent, new_values)
@@ -388,10 +396,12 @@ def test_tree_move_command_execute_no_change():
     root.withdraw()
     tree = ttk.Treeview(root)
     # Set up tree
-    parent = tree.insert('', 'end', text='Parent')
-    child = tree.insert(parent, 'end', text='Child', values=('value1', 'value2', 'value3'))
+    parent = tree.insert("", "end", text="Parent")
+    child = tree.insert(
+        parent, "end", text="Child", values=("value1", "value2", "value3")
+    )
     # Create command with same parent and values
-    new_values = ('value1', 'value2', 'value3')
+    new_values = ("value1", "value2", "value3")
     command = TreeMoveCommand(tree, child, parent, new_values)
     # Execute command
     result = command.execute()
@@ -400,7 +410,7 @@ def test_tree_move_command_execute_no_change():
     # Check that child is still under original parent
     assert tree.parent(child) == parent
     # Check that values are unchanged
-    assert tree.item(child, 'values') == new_values
+    assert tree.item(child, "values") == new_values
     root.destroy()
 
 
@@ -409,10 +419,12 @@ def test_tree_move_command_undo_no_item():
     root.withdraw()
     tree = ttk.Treeview(root)
     # Set up tree
-    parent = tree.insert('', 'end', text='Parent')
-    child = tree.insert(parent, 'end', text='Child', values=('value1', 'value2', 'value3'))
-    new_parent = tree.insert('', 'end', text='New Parent')
-    new_values = ('new_value1', 'new_value2', 'new_value3')
+    parent = tree.insert("", "end", text="Parent")
+    child = tree.insert(
+        parent, "end", text="Child", values=("value1", "value2", "value3")
+    )
+    new_parent = tree.insert("", "end", text="New Parent")
+    new_values = ("new_value1", "new_value2", "new_value3")
     with pytest.raises(TclError):
         command = TreeMoveCommand(tree, child, new_parent, new_values)
         # Execute command
@@ -423,13 +435,14 @@ def test_tree_move_command_undo_no_item():
     root.destroy()
 
 
-#region quality_mismatch
+# region quality_mismatch
 def test_quality_mismatch_same_quality():
     # Both paths contain the same category-quality combination
     model_path = "/models/Attire_Good/model.safetensors"
     png_path = "/images/Attire_Good/image.png"
     result = TreeMoveCommand.quality_mismatch(model_path, png_path)
     assert result == False  # No mismatch
+
 
 def test_quality_mismatch_different_quality():
     # Paths contain different category-quality combinations
@@ -438,12 +451,14 @@ def test_quality_mismatch_different_quality():
     result = TreeMoveCommand.quality_mismatch(model_path, png_path)
     assert result == True  # Mismatch
 
+
 def test_quality_mismatch_one_missing():
     # One path does not contain any category-quality combination
     model_path = "/models/Attire_Good/model.safetensors"
     png_path = "/images/unknown/image.png"
     result = TreeMoveCommand.quality_mismatch(model_path, png_path)
     assert result == True  # Mismatch
+
 
 def test_quality_mismatch_both_missing():
     # Neither path contains any category-quality combination
@@ -452,6 +467,7 @@ def test_quality_mismatch_both_missing():
     result = TreeMoveCommand.quality_mismatch(model_path, png_path)
     assert result == False  # No mismatch because both are "None"
 
+
 def test_quality_mismatch_same_none():
     # Both paths return "None" for quality
     model_path = "/models/unknown/model.safetensors"
@@ -459,12 +475,14 @@ def test_quality_mismatch_same_none():
     result = TreeMoveCommand.quality_mismatch(model_path, png_path)
     assert result == False  # No mismatch
 
+
 def test_quality_mismatch_case_insensitive():
     # Test case sensitivity
     model_path = "/models/attire_good/model.safetensors"
     png_path = "/images/Attire_Good/image.png"
     result = TreeMoveCommand.quality_mismatch(model_path, png_path)
     assert result == True  # Mismatch if case-sensitive
+
 
 def test_quality_mismatch_substring():
     # Test when a category-quality is a substring of another
