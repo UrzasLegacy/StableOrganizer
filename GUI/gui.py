@@ -1,19 +1,19 @@
 """Main GUI module"""
-VERSION = 0.7
 
 import logging
 import os
-import subprocess
 import shlex
+import subprocess
 import tkinter as tk
 import tkinter.messagebox as msgbox
 from tkinter import ttk
 from tkinter.filedialog import askdirectory
 
-from handlers import InfoHandler, FileHandler, ModelDictHandler, CommandHandler
-from _dataclasses import LoraEntry, DuplicateInfo
+from _dataclasses import DuplicateInfo, LoraEntry
+from handlers import CommandHandler, FileHandler, InfoHandler, ModelDictHandler  # noqa: F401
 from helpers import QUALITIES
 
+VERSION = 0.7
 ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_CONFIG = {
   "ckpt_processing_dir": None,
@@ -37,9 +37,9 @@ class StableOrganizerApp:
         self.config_path = os.path.join(ROOT_DIRECTORY, "config.json")
         self.config_data = self.load_config()
 
-        self.info_handler = InfoHandler(self.config_data)
-        self.file_handler = FileHandler(self.config_data)
-        self.model_dict_handler = ModelDictHandler(self.file_handler, self.config_data)
+        self.info_handler: InfoHandler = InfoHandler(self.config_data)
+        self.file_handler: FileHandler = FileHandler(self.config_data)
+        self.model_dict_handler: ModelDictHandler = ModelDictHandler(self.file_handler, self.config_data)
         #self.command_handler = CommandHandler()
         self.file_handler.initialize_lora_directories()
 
@@ -89,7 +89,6 @@ class StableOrganizerApp:
 
 
     #endregion Configuration
-
 
 #============================================================================================================================================
     #region                                                         Setup Functions                                                         #
@@ -172,7 +171,7 @@ class StableOrganizerApp:
     def create_context_menu(self) -> None:
         """Create a context menu."""
         self.context_menu = tk.Menu(self.root, tearoff=0)
-        self.context_menu.add_command(label="Search with Everything", command=self.search_with_everything)
+        self.context_menu.add_command(label="Search with Everything", command=self._search_with_everything)
         self.context_menu.add_command(label="Open Lora Parent Folder", command=self.open_lora_parent_directory)
         self.context_menu.add_command(label="Open PNG Directory", command=self.open_png_directory)
         self.context_menu.add_separator()
@@ -196,7 +195,6 @@ class StableOrganizerApp:
 
 
     #endregion Setup Functions
-
 
 #============================================================================================================================================
     #region                                                         Keybinds                                                                #
@@ -367,12 +365,12 @@ class StableOrganizerApp:
         pass
 
 
-    def search_with_everything(self):
+    def _search_with_everything(self):
         selected_items = self.tree.selection()
         if len(selected_items):
             name = self.tree.item(selected_items[0],"text")
             if name:
-                self.file_handler.search_with_everything(name)
+                self.search_with_everything(name)
 
 
     def move_pair_to_quality_directory(self, target_quality) -> None:

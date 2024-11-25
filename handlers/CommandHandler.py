@@ -6,7 +6,7 @@ import threading
 
 from abc import ABC, abstractmethod
 
-from helpers import *
+from helpers import CAT_QUAL_PATTERN
 
 ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 log_file_path = os.path.join(ROOT_DIRECTORY, "debugging.log")
@@ -89,7 +89,7 @@ class CompositeCommand(Command):
             try:
                 command.execute()
                 executed_commands.append(command)
-            except Exception as e:
+            except Exception:
                 #logger.exception("Error executing command %s: %s", type(command).__name__, e, exc_info=1, stack_info=True)
                 for command in reversed(executed_commands):
                     command.undo()

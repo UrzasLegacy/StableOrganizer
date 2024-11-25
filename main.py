@@ -19,6 +19,10 @@
 
 import os
 import logging
+import tkinter as tk
+
+from GUI import StableOrganizerApp
+
 
 ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
@@ -34,8 +38,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-import tkinter as tk
-from GUI import StableOrganizerApp
 
 if __name__ == "__main__":
     root = tk.Tk()
