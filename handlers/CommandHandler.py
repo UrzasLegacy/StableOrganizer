@@ -75,16 +75,12 @@ class Command(ABC):
 
 
 class CompositeCommand(Command):
-    """
-    A composite command that executes and undoes multiple commands as a single unit.
-    """
+    """A composite command that executes and undoes multiple commands as a single unit."""
     def __init__(self, commands):
-        """
-        Initialize with a list of commands.
+        """Initialize with a list of commands.
 
         Parameters:
-            commands: A list of Command objects to be executed/undone together.
-        """
+            commands: A list of Command objects to be executed/undone together."""
         self.commands: list[Command] = commands
 
     def execute(self):
@@ -109,21 +105,20 @@ class CompositeCommand(Command):
 
 
 class FileMoveCommand(Command):
-    """
-    Move a file and store previous state.
+    """Move a file and store previous state.
 
     Parameters:
         src_file: Source path of file.
         dest_file: Destination path of file.
-    """
+        """
     def __init__(self, source_path: str, destination_path: str, quiet: bool = False):
         """Initialize the command with source and destination paths.
 
         Parameters:
             source_path (str): The path of the source file.
             destination_path (str): The path to move the file to.
-            quiet (bool): If True, suppresses logging output.
-        """
+            quiet (bool): If True, suppresses logging output."""
+
         self.source_path = source_path
         self.destination_path = destination_path
         self.quiet = quiet
@@ -181,15 +176,13 @@ class FileMoveCommand(Command):
 
 
 class TreeMoveCommand(Command):
-    """
-    Initialize the command with treeview, item ID, and new location details.
+    """Initialize the command with treeview, item ID, and new location details.
 
     Parameters:
         tree: The Treeview widget where the operation takes place.
         item_id: The ID of the item to move.
         new_parent: The new parent ID (or '' for the root).
-        new_index: The new position index under the new parent.
-    """
+        new_index: The new position index under the new parent."""
 
     def __init__(self, tree, item_id, new_parent, new_values):
         # if not tree.exists(item_id):

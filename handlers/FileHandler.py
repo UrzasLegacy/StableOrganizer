@@ -8,13 +8,12 @@ import re
 
 from helpers import CATEGORIES, QUALITIES, ROOT_DIRECTORY
 from handlers.CommandHandler import stack, FileMoveCommand
-from handlers import DataStoreInterface, CommandHandler
+from handlers import DataStoreInterface#, CommandHandler
 logger = logging.getLogger(__name__)
 
 
 class FileHandler(DataStoreInterface):
-    """
-    Container for various functions that perform file actions.
+    """Container for various functions that perform file actions.
 
     Methods:
         log_dicts(png_dict, lora_dict=None, ckpt_dict=None) -> None:
@@ -26,9 +25,7 @@ class FileHandler(DataStoreInterface):
         move_all_files(source_dir: str, destination_dir: str) -> None:
             Move all files within a source directory to a destination directory
         initialize_lora_directories() -> None:
-            Create lora model and png subdirectories.
-
-    """
+            Create lora model and png subdirectories."""
 
 #region Setup
 

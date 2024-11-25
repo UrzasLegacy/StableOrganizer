@@ -65,12 +65,10 @@ class StableOrganizerApp:
 
 
     def load_config(self) -> dict:
-        """
-        Load configuration settings.
+        """Load configuration settings.
 
         Returns:
-            dict: Settings dictionary.
-        """
+            dict: Settings dictionary."""
         if os.path.exists(self.config_path):
             config = self.file_handler.load_json_file(self.config_path, default={}, relative_path=False)
         else:
@@ -79,12 +77,10 @@ class StableOrganizerApp:
 
 
     def save_config(self, config: dict) -> None:
-        """
-        Save configuration settings.
+        """Save configuration settings.
 
         Args:
-            config (dict): Settings dictionary
-        """
+            config (dict): Settings dictionary"""
         self.file_handler.save_json_file(self.config_path, config, relative_path=False)
 
 
@@ -267,10 +263,8 @@ class StableOrganizerApp:
 
 
     def find_visible_leaf(self, item):
-        """
-        Recursively find the first visible leaf node starting from the given item.
-        Ignores collapsed nodes.
-        """
+        """Recursively find the first visible leaf node starting from the given item.
+        Ignores collapsed nodes."""
         # If the item is a leaf node (no children), return it
         if not self.tree.get_children(item):
             return item
