@@ -1,3 +1,4 @@
+"""Actions that use the stack go here"""
 import os
 import shutil
 import logging

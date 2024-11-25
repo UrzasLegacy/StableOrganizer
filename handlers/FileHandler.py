@@ -4,18 +4,15 @@ import logging
 import json
 import shutil
 import subprocess
-import shlex
 import re
 
-from helpers import *
+from helpers import CATEGORIES, QUALITIES, ROOT_DIRECTORY
 from handlers.CommandHandler import stack, FileMoveCommand
-
-ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
-
+from handlers import DataStoreInterface#, CommandHandler
 logger = logging.getLogger(__name__)
 
 
-class FileHandler:
+class FileHandler(DataStoreInterface):
     """
     Container for various functions that perform file actions.
 
@@ -33,7 +30,7 @@ class FileHandler:
 
     """
 
-#region Init
+#region Setup
 
     def __init__(self, config_data: dict = None) -> None:
         self.lora_model_dir = config_data.get('lora_model_dir')

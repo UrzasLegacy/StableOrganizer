@@ -1,8 +1,6 @@
 import logging
 import os
 import re
-from dataclasses import dataclass, is_dataclass, field, asdict
-from typing import Optional, List, Dict
 import json
 
 from itertools import product
@@ -475,26 +473,3 @@ class InfoHandler():
             return output
 
 
-@dataclass
-class DuplicateInfo:
-    category: str
-    quality: str
-    has_model: bool
-    has_png: bool
-
-    def to_dict(self):
-        return asdict(self)
-
-
-@dataclass
-class LoraEntry:
-    model_path: Optional[str]
-    png_path: Optional[str]
-    duplicates: List[DuplicateInfo] = field(default_factory=list)
-
-    def to_dict(self):
-        return {
-            'model_path': self.model_path,
-            'png_path': self.png_path,
-            'duplicates': [dup.to_dict() for dup in self.duplicates]
-        }
