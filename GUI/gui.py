@@ -13,7 +13,7 @@ from _dataclasses import DuplicateInfo, LoraEntry
 from handlers.FileHandler import FileHandler
 from handlers.InfoHandler import InfoHandler
 from handlers.ModelDictHandler import ModelDictHandler
-from handlers.CommandHandler import Stack
+from handlers.CommandHandler import Stack, FileMoveCommand, TreeMoveCommand
 
 from helpers import QUALITIES
 
@@ -409,16 +409,11 @@ class StableOrganizerApp:
                 continue
             selected_path = self.get_full_path(selection)
             category, current_quality, lora_name = selected_path.split("\\")
-
             item_values = list(self.tree.item(selection, "values"))
             current_lora_path = item_values[1]
-            current_lora_name = os.path.basename(current_lora_path)
-            if DEBUG:
-                logger.debug(f"current_lora_name: {current_lora_path}")
             current_png_path = item_values[2]
+            current_lora_name = os.path.basename(current_lora_path)
             current_png_dir = os.path.basename(current_png_path)
-            if DEBUG:
-                logger.debug(f"cur_png_dir_path: {current_png_path}")
             lora_target_path = os.path.normpath(
                 os.path.join(
                     self.lora_model_dir,
@@ -434,32 +429,31 @@ class StableOrganizerApp:
                 if not os.path.exists(os.path.dirname(lora_target_path)):
                     logger.exception(f"Target dir does not exist: {lora_target_path}")
                     raise FileNotFoundError
-                if not self.file_handler.move(current_lora_path, lora_target_path, quiet=not DEBUG):
-                    msgbox.showinfo(
-                        f"Move Failed! {current_lora_path} => {lora_target_path}",
-                        "No matching Lora names found.",
-                    )
-                    continue
+                self.stack.queue_command(FileMoveCommand(current_lora_path, lora_target_path))
                 update_flag = True
-                logger.debug(f"Move Lora: {current_lora_path} =====> {lora_target_path}")
                 item_values[1] = lora_target_path
             if current_png_path != "None" and current_png_path != lora_png_target_path:
                 if not os.path.exists(os.path.dirname(lora_png_target_path)):
                     logger.exception(f"Target dir does not exist: {lora_png_target_path}")
                     raise FileNotFoundError
-                if not self.file_handler.move(current_png_path, lora_png_target_path, quiet=not DEBUG):
-                    msgbox.showinfo(
-                        f"Move Failed! {current_png_path} => {lora_png_target_path}",
-                        "No matching Lora names found.",
-                    )
-                    continue
+                self.stack.queue_command(FileMoveCommand(current_png_path, lora_png_target_path))
                 update_flag = True
-                logger.debug(f"Move PNGs: {current_png_path} =====> {lora_png_target_path}")
                 item_values[2] = lora_png_target_path
             if update_flag:
                 old_parent = self.tree.parent(selection)
                 new_parent = self.find_category_quality_node(category, target_quality)
-                updated_selection = self.move_and_update_row(selection, new_parent, tuple(item_values))
+                self.stack.queue_command(TreeMoveCommand(self.tree, selection, new_parent, tuple(item_values)))
+                try:
+                    results = self.stack.execute_queued_commands()
+                except Exception as e:
+                    logger.exception("Queue command failure in GUI %s", e, exc_info=1, stack_info=True)
+                    msgbox.showinfo(
+                        f"Move Failed! {current_lora_path} => {lora_target_path}",
+                        e,
+                    )
+                    continue
+                updated_selection = results.data[-1].data
+                # updated_selection = self.move_and_update_row(selection, new_parent, tuple(item_values))
                 if old_parent == new_parent:
                     fallback_row = updated_selection
                 parent_sort.add(new_parent)
@@ -507,7 +501,6 @@ class StableOrganizerApp:
         updated_selection = self.tree.insert(new_parent, save_index, text=item_text, values=values, tags=tuple(tags))
         if DEBUG:
             print(f"Item moved to {new_parent} and updated with new values: {values}")
-
         return updated_selection
 
     def quality_mismatch(self, model_path, png_path):

@@ -1,10 +1,10 @@
 """Actions that use the stack go here"""
 
+import logging
 import os
 import shutil
-import logging
 import threading
-
+import tkinter.messagebox as msgbox
 from abc import ABC, abstractmethod
 
 from helpers import CAT_QUAL_PATTERN
@@ -17,16 +17,28 @@ logger = logging.getLogger(__name__)
 
 # region Stack
 class Stack:
-    """A stack to manage commands, enabling undo functionality."""
+    """A stack to manage commands, enabling undo functionality.
+
+    Methods:
+        history: list[str]
+        queue: list[str]"""
 
     def __init__(self):
         self.command_history = []
         self.command_queue = []
         self.lock = threading.Lock()
+        self.q_lock = threading.Lock()
+
+    @property
+    def history(self):
+        return map(str, self.command_history)
+
+    @property
+    def queue(self):
+        return map(str, self.command_queue)
 
     def push(self, command):
         """Adds a command to the stack."""
-        print("beep")
         with self.lock:
             self.command_history.append(command)
 
@@ -39,31 +51,34 @@ class Stack:
 
     def undo(self):
         """Performs the undo operation for the most recent command."""
-        with self.lock:
-            if not self.command_history:
-                print("Nothing to undo")
-                return
-            command = self.pop()
-            command.undo()
+        if not self.command_history:
+            print("Nothing to undo")
+            return
+        command = self.command_history.pop()
+        command.undo()
 
     def queue_command(self, cmd):
         """Adds command to a queue for later processing."""
-        self.command_queue.append(cmd)
+        with self.q_lock:
+            self.command_queue.append(cmd)
 
     def execute_queued_commands(self):
-        """Executes all queued commands as a batch."""
+        """Executes all queued commands as a composite."""
         if not self.command_queue:
-            print("No commands to execute")
+            logger.debug("No commands to execute")
             return
-        composite_cmd = CompositeCommand(self.command_queue)
-        try:
-            composite_cmd.execute()
-            self.command_queue.clear()
-            self.push(composite_cmd)
-        except Exception as e:
-            logger.exception(f"Batch execution failed: {e}")
-            composite_cmd.undo()
-            raise
+        with self.q_lock:
+            results = None
+            composite_cmd = CompositeCommand(self.command_queue)
+            try:
+                results = composite_cmd.execute()
+                self.command_queue.clear()
+                self.push(composite_cmd)
+            except Exception as e:
+                logger.exception(f"Queued batch execution failed: {e}")
+                composite_cmd.undo()
+                raise
+            return results
 
 
 # region Commands
@@ -80,6 +95,23 @@ class Command(ABC):
         pass
 
 
+class CommandResult:
+    """Standardized command result.
+
+    Parameters:
+        success: bool
+        data: any
+        details: str"""
+
+    def __init__(self, success: bool, data=None, details: str = ""):
+        self.success = success
+        self.data = data
+        self.details = details
+
+    def __repr__(self):
+        return f"CommandResult(success={self.success}, data={self.data}, details={self.details})"
+
+
 class CompositeCommand(Command):
     """A composite command that executes and undoes multiple commands as a single unit."""
 
@@ -89,32 +121,49 @@ class CompositeCommand(Command):
         Parameters:
             commands: A list of Command objects to be executed/undone together."""
         self.commands: list[Command] = commands
+        self.results = []
+
+    @property
+    def details(self) -> str:
+        out = []
+        for command in self.commands:
+            out.append(command.details)
+        return out
+
+    @property
+    def result(self) -> str:
+        out = []
+        for result in self.results:
+            out.append(result.data if result.data else self.success)
+        return out
 
     def execute(self):
         executed_commands: list[Command] = []
+        results = []
         for command in self.commands:
             try:
-                command.execute()
+                result = command.execute()
                 executed_commands.append(command)
-            except Exception:
-                # logger.exception("Error executing command %s: %s", type(command).__name__, e, exc_info=1, stack_info=True)
+                results.append(result)
+            except Exception as e:
+                logger.exception(
+                    "Error executing command %s: %s", type(command).__name__, e, exc_info=1, stack_info=True
+                )
                 for command in reversed(executed_commands):
                     command.undo()
-                return
-        return True
+                raise
+        self.commands = executed_commands
+        self.results = results
+        return CommandResult(True, self.results)
 
     def undo(self):
         for command in reversed(self.commands):
             try:
                 command.undo()
             except Exception as e:
-                logger.exception(
-                    "Error undoing %s: %s",
-                    type(command).__name__,
-                    e,
-                    exc_info=1,
-                    stack_info=True,
-                )
+                logger.exception("Error undoing %s: %s", type(command).__name__, e, exc_info=1, stack_info=True)
+                raise
+        self.results.clear()
 
 
 class FileMoveCommand(Command):
@@ -123,61 +172,72 @@ class FileMoveCommand(Command):
     Parameters:
         src_file: Source path of file.
         dest_file: Destination path of file.
+
+    Returns:
+        True if successful
+
+    Raises:
+        ValueError | FileExistsError
     """
 
-    def __init__(self, source_path: str, destination_path: str, quiet: bool = False):
+    def __init__(self, source_path: str, destination_path: str):
         """Initialize the command with source and destination paths.
 
         Parameters:
             source_path (str): The path of the source file.
-            destination_path (str): The path to move the file to.
-            quiet (bool): If True, suppresses logging output."""
+            destination_path (str): The path to move the file to."""
 
         self.source_path = source_path
         self.destination_path = destination_path
-        self.quiet = quiet
         self.target_path = None
+        self._result = None
 
     @property
     def details(self) -> str:
         return f"{self.source_path} => {self.destination_path}"
 
+    @property
+    def result(self) -> str:
+        return self._result
+
     def execute(self):
         """Executes the move operation (moves the file from src to dest)."""
         if not os.path.exists(self.source_path):
+            msgbox.showinfo("File not found", f"{self.source_path}")
             raise ValueError(f"File not found: {self.source_path}")
         if self.source_path == self.destination_path:
-            raise ValueError(
-                "Cancel move (src == dest): %s => %s",
-                self.source_path,
-                self.destination_path,
-            )
-
+            raise ValueError(f"Cancel move (src == dest): {self.source_path} => {self.destination_path}")
         dest_is_dir = os.path.isdir(self.destination_path)
         dest_exists = os.path.exists(self.destination_path)
         if dest_exists and not dest_is_dir:
-            raise FileExistsError(f"Destination file already exists: {self.destination_path}")
+            msgbox.showinfo("Destination file already exists: No movement", f"{self.destination_path}")
+            self._result = CommandResult(
+                True, None, f"Destination file already exists: No movement: {self.destination_path}"
+            )
+            return self._result  # TODO user option to replace?
         self.target_path = (
             os.path.join(self.destination_path, os.path.basename(self.source_path))
             if dest_is_dir
             else self.destination_path
         )
         if os.path.exists(self.target_path):
-            raise FileExistsError(f"Target path already exists: {self.target_path}")
+            msgbox.showinfo("Destination file already exists: No movement", f"{self.destination_path}")
+            self._result = CommandResult(
+                True, None, f"Destination file already exists: No movement: {self.destination_path}"
+            )
+            return self._result  # TODO user option to replace?
+
         parent_dir = os.path.dirname(self.target_path)
         os.makedirs(parent_dir, exist_ok=True)
         try:
             shutil.move(self.source_path, self.target_path)
-            if not self.quiet:
-                logger.debug("File\tmoved %s to %s", self.source_path, self.target_path)
+            logger.debug("File\tmoved %s to %s", self.source_path, self.target_path)
+            self._result = CommandResult(True, None, self.details)
+            return self._result
         except Exception as e:
-            raise ValueError(
-                "Error moving file: %s => %s\n%s",
-                self.source_path,
-                self.destination_path,
-                e,
-            )
-        return True
+            msgbox.showinfo("File move failed!", f"{self.destination_path}\n{e}")
+            self._result = CommandResult(False, None, f"File move failed: {self.destination_path}\n{e}")
+            return self._result
 
     def undo(self):
         """Reverses the move operation."""
@@ -187,16 +247,17 @@ class FileMoveCommand(Command):
                 raise FileExistsError(f"Cannot undo move: Source file already exists at {self.source_path}")
             try:
                 shutil.move(self.target_path, self.source_path)
-                if not self.quiet:
-                    logger.debug(
-                        "Undo file\tmove: %s back to %s",
-                        self.target_path,
-                        self.source_path,
-                    )
+                logger.debug(
+                    "Undo file\tmove: %s back to %s",
+                    self.target_path,
+                    self.source_path,
+                )
+                self.target_path = None
+                self._result = None
             except Exception as e:
-                raise ValueError("Error undoing move %s: %s", self.details, e)
+                raise ValueError(f"Error undoing move {self.details}: {e}")
         else:
-            raise ValueError("Undo failed: File does not exist at source: %s", self.details)
+            raise ValueError(f"Undo failed: File does not exist at source: {self.details}")
 
 
 class TreeMoveCommand(Command):
@@ -206,7 +267,13 @@ class TreeMoveCommand(Command):
         tree: The Treeview widget where the operation takes place.
         item_id: The ID of the item to move.
         new_parent: The new parent ID (or '' for the root).
-        new_index: The new position index under the new parent."""
+        new_index: The new position index under the new parent.
+
+    Results:
+        New row id
+
+    Exceptions:
+        ValueError"""
 
     def __init__(self, tree, item_id, new_parent, new_values):
         # if not tree.exists(item_id):
@@ -220,15 +287,26 @@ class TreeMoveCommand(Command):
         self.old_parent = tree.parent(item_id)
         self.old_values = tree.item(item_id, "values")
         self.old_index = tree.index(item_id)
+        self._result = None
 
     @property
     def details(self) -> str:
         return f"{self.item_text}: {self.old_values} => {self.new_values}"
 
+    @property
+    def result(self) -> str:
+        return self._result
+
     def execute(self):
         """Move treeview entry and refresh its values."""
         if not self.item_id:
-            raise ValueError("Item ID doesn't exist")
+            logger.error("Execute command failure (item ID doesn't exist) in TreeMoveCommand: %s", self.item_text)
+            msgbox.showinfo(
+                "Command Failed! Item ID error.",
+                f"{self.item_text}",
+            )
+            self._result = CommandResult(False, None, self.details)
+            return self._result
         if self.tree.parent(self.item_id) == self.new_parent:
             self.new_index = self.old_index
         if self.new_values == self.old_values and self.tree.parent(self.item_id) == self.new_parent:
@@ -236,7 +314,13 @@ class TreeMoveCommand(Command):
         self.tree.delete(self.item_id)
         values = tuple(self.new_values) if self.new_values else tuple(self.old_values)
         if len(values) < 3:
-            raise ValueError
+            logger.error("Execute command failure (row value length error) in TreeMoveCommand: %s", self.item_text)
+            msgbox.showinfo(
+                "Command Failed! Row value length error.",
+                f"{self.item_text}",
+            )
+            self._result = CommandResult(False, None, self.details)
+            return self._result
         lora_definition, lora_path, png_path = values
         if png_path and png_path != "None":
             tags = ["dir_mismatch"] if TreeMoveCommand.quality_mismatch(lora_path, png_path) else ["has_imgs"]
@@ -250,23 +334,27 @@ class TreeMoveCommand(Command):
             tags=tuple(tags),
         )
         self.item_id = updated_selection
+        self._result = CommandResult(True, self.item_id, self.details)
         logger.debug(
             f"Row\tmoved to \"{self.tree.item(self.new_parent, 'text')}\" and updated with new values: {values}"
         )
-        return updated_selection
+        return self._result
 
     def undo(self):
         """Reverses the move operation (moves the Treeview item back to its original location)."""
-        if not self.item_id:
-            raise ValueError("Item ID doesn't exist")
         if self.tree.parent(self.item_id) == self.old_parent:
             self.new_index = self.old_index
         if self.old_values == self.new_values and self.tree.parent(self.item_id) == self.old_parent:
-            return
+            return CommandResult(True, None, "No movement")
         self.tree.delete(self.item_id)
         values = tuple(self.old_values)
         if len(values) < 3:
-            raise ValueError
+            logger.error("Undo command failure (row value length error) in TreeMoveCommand: %s", self.item_text)
+            msgbox.showinfo(
+                "Undo Failed! Row value length error.",
+                f"{self.item_text}",
+            )
+            return CommandResult(False, None, self.details)
         lora_definition, lora_path, png_path = values
         if png_path and png_path != "None":
             tags = ["dir_mismatch"] if TreeMoveCommand.quality_mismatch(lora_path, png_path) else ["has_imgs"]
@@ -283,7 +371,6 @@ class TreeMoveCommand(Command):
         logger.debug(
             f"Undo row\tmove: {self.new_parent} back to \"{self.tree.item(self.old_parent, 'text')}\" and updated with new values: {values}"
         )
-        return updated_selection
 
     @staticmethod
     def quality_mismatch(model_path: str, png_path: str) -> bool:
