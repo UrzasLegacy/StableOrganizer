@@ -13,35 +13,18 @@ ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 log_file_path = os.path.join(ROOT_DIRECTORY, "debugging.log")
 
 logger = logging.getLogger(__name__)
+
 # region Stack
-
-
-def singleton(cls):
-    _instance = None
-    _lock = threading.Lock()
-
-    def wrapper(*args, **kwargs):
-        nonlocal _instance
-        with _lock:
-            if _instance is None:
-                _instance = cls(*args, **kwargs)
-        return _instance
-
-    return wrapper
-
-
-@singleton
 class Stack:
-    """A global stack to manage commands, enabling undo functionality."""
+    """A stack to manage commands, enabling undo functionality."""
 
     def __init__(self):
-        if not hasattr(self, "_initialized"):
-            self.commands = []
-            self.lock = threading.Lock()
-            self._initialized = True
+        self.commands = []
+        self.lock = threading.Lock()
 
     def push(self, command):
         """Adds a command to the stack."""
+        print('beep')
         with self.lock:
             self.commands.append(command)
 
@@ -61,8 +44,6 @@ class Stack:
         command = self.pop()
         command.undo()
 
-
-stack = Stack()
 
 
 # region Commands
