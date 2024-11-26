@@ -42,9 +42,7 @@ class ModelDictHandler:
     def _initialize_model_dict(self):
         self.model_dict = self.data_store.load_data()
         if not self._validate_model_dictionary():
-            logger.exception(
-                "Can't initialize invalid root dictionary.", exc_info=1, stack_info=True
-            )
+            logger.exception("Can't initialize invalid root dictionary.", exc_info=1, stack_info=True)
             raise ValueError("Can't initialize invalid root dictionary.")
 
     def _load_model_dict(self):
@@ -52,7 +50,7 @@ class ModelDictHandler:
 
     def _save_model_dict(self):
         out_str = self.custom_format_dictionary()
-        return self.data_store.save_data(out_str, preserve_string=True)
+        return self.data_store.save_data(out_str)
 
     def _validate_model_dictionary(self) -> bool:
         """Validates the structure of the root model dictionary for required keys and types.
@@ -61,25 +59,13 @@ class ModelDictHandler:
             bool: True if the root dictionary is valid, ValueError otherwise."""
         if not self.model_dict:
             raise ValueError(f"Root dictionary isn't initialized.\n{self.model_dict}")
-        if (
-            not isinstance(self.model_dict, dict)
-            or "lora" not in self.model_dict
-            or "ckpt" not in self.model_dict
-        ):
+        if not isinstance(self.model_dict, dict) or "lora" not in self.model_dict or "ckpt" not in self.model_dict:
             raise ValueError(f"Root dictionary is invalid.\n{self.model_dict}")
         lora_data = self.model_dict.get("lora", {})
-        if (
-            not isinstance(lora_data, dict)
-            or "hash" not in lora_data
-            or "name" not in lora_data
-        ):
+        if not isinstance(lora_data, dict) or "hash" not in lora_data or "name" not in lora_data:
             raise ValueError(f"LoRA dictionary is invalid.\n{lora_data}")
         ckpt_data = self.model_dict.get("ckpt", {})
-        if (
-            not isinstance(ckpt_data, dict)
-            or "hash" not in ckpt_data
-            or "name" not in ckpt_data
-        ):
+        if not isinstance(ckpt_data, dict) or "hash" not in ckpt_data or "name" not in ckpt_data:
             raise ValueError(f"Ckpt dictionary is invalid.\n{ckpt_data}")
         return True
 
@@ -175,9 +161,7 @@ class ModelDictHandler:
         self._validate_model_dictionary()
         self._add_to_model_dict(entries=ckpt_entries, entry_type="ckpt")
 
-    def _add_to_model_dict(
-        self, entries: list = None, entry_type: str = "lora"
-    ) -> dict:
+    def _add_to_model_dict(self, entries: list = None, entry_type: str = "lora") -> dict:
         """Add entries to Dictionary in JSON file, preserve custom formatting, and save to file. Returns updated dictionary.
 
         Parameters:
@@ -193,9 +177,7 @@ class ModelDictHandler:
         self._validate_model_dictionary()
         type_dictionary: dict = self.model_dict.get(entry_type, {})
         if not type_dictionary:
-            raise FileNotFoundError(
-                f"No type dictionary '{entry_type}' in model dictionary."
-            )
+            raise FileNotFoundError(f"No type dictionary '{entry_type}' in model dictionary.")
         name_dictionary: dict = type_dictionary.get("name", {})
         hash_dictionary: dict = type_dictionary.get("hash", {})
         for entry in entries:
@@ -204,9 +186,7 @@ class ModelDictHandler:
                 entry_hash = name_dictionary[name_key].get("HASH", "0")
                 hash_dictionary[entry_hash] = name_key
         sorted_name_dict = dict(sorted(name_dictionary.items()))
-        sorted_hash_dict = dict(
-            sorted(hash_dictionary.items(), key=lambda x: int(x[0]))
-        )
+        sorted_hash_dict = dict(sorted(hash_dictionary.items(), key=lambda x: int(x[0])))
         type_dictionary["name"] = sorted_name_dict
         type_dictionary["hash"] = sorted_hash_dict
         self._save_model_dict()
@@ -236,9 +216,7 @@ class ModelDictHandler:
             if "HASH" in metadata and metadata["HASH"] != "":
                 hash_value = metadata["HASH"]
                 type_dictionary["hash"][hash_value] = name_key
-        type_dictionary["hash"] = dict(
-            sorted(type_dictionary["hash"].items(), key=lambda x: int(x[0]))
-        )
+        type_dictionary["hash"] = dict(sorted(type_dictionary["hash"].items(), key=lambda x: int(x[0])))
 
     def custom_format_dictionary(self) -> str:
         """Format a dictionary to a string with the desired structure:
@@ -272,17 +250,13 @@ class ModelDictHandler:
         result = []
         for sub_key in self.model_dict.keys():
             sub_dict = self.model_dict[sub_key]
-            max_key_length = max(
-                (key for key in map(len, sub_dict["name"].keys())), default=0
-            )
+            max_key_length = max((key for key in map(len, sub_dict["name"].keys())), default=0)
             formatted_name_entries = []
             for key, value in sub_dict["name"].items():
                 entry_str = f'            "{key}": {" " * (max_key_length - len(key))}{json.dumps(value, separators=(", ", ": "))}'
                 formatted_name_entries.append(entry_str)
             formatted_name = ",\n".join(formatted_name_entries)
-            formatted_hash = json.dumps(
-                sub_dict["hash"], indent=4, separators=(", ", ": ")
-            ).replace("\n", "\n        ")
+            formatted_hash = json.dumps(sub_dict["hash"], indent=4, separators=(", ", ": ")).replace("\n", "\n        ")
             sub_dict_result = (
                 f"\n"
                 f'    "{sub_key}": {{\n'

@@ -31,9 +31,7 @@ class FileHandler(DataStoreInterface):
 
     # region Setup
 
-    def __init__(
-        self, config_data: dict = None, stack: Stack = None
-    ) -> None:
+    def __init__(self, config_data: dict = None, stack: Stack = None) -> None:
         self.lora_model_dir = config_data.get("lora_model_dir")
         self.lora_png_dir = config_data.get("lora_png_dir")
         self.model_dict_path = config_data.get("model_dict_path")
@@ -83,28 +81,22 @@ class FileHandler(DataStoreInterface):
         return self.load_json_file(self.model_dict_path)
 
     def save_data(self, data: dict) -> None:
-        self.save_json_file(self.model_dict_path, data)
+        self.save_json_file(self.model_dict_path, data, preserve_string=True)
 
     # region Class methods
     def log_dicts(self, lora_dict, ckpt_dict=None) -> None:
         """Print dictionaries to file for review."""
-        png_log_file_path = (
-            os.path.splitext(os.path.abspath(__file__))[0] + "_lora_dict.log"
-        )
+        png_log_file_path = os.path.splitext(os.path.abspath(__file__))[0] + "_lora_dict.log"
         with open(png_log_file_path, "w") as f:
             f.write(json.dumps(lora_dict, indent=2))
         if ckpt_dict:
-            ckpt_log_file_path = (
-                os.path.splitext(os.path.abspath(__file__))[0] + "_ckpt_dict.log"
-            )
+            ckpt_log_file_path = os.path.splitext(os.path.abspath(__file__))[0] + "_ckpt_dict.log"
             with open(ckpt_log_file_path, "w") as f:
                 f.write(json.dumps(ckpt_dict, indent=2))
 
     def move(self, source_path, destination_path, quiet=True) -> None:
         """Move file or directory from source to destination."""
-        mv_cmd = FileMoveCommand(
-            source_path, destination_path, quiet
-        )
+        mv_cmd = FileMoveCommand(source_path, destination_path, quiet)
         result = mv_cmd.execute()
         if result:
             self.stack.push(mv_cmd)
@@ -141,9 +133,7 @@ class FileHandler(DataStoreInterface):
     def load_json_file(file: str, default=None, relative_path: bool = True):
         """Reads a json file and returns the json dict, stripping out "//" comments first."""
         if relative_path:
-            filepath = os.path.join(
-                os.path.realpath(ROOT_DIRECTORY), file
-            )
+            filepath = os.path.join(os.path.realpath(ROOT_DIRECTORY), file)
         else:
             filepath = file
         if os.path.exists(filepath):
@@ -151,6 +141,7 @@ class FileHandler(DataStoreInterface):
                 config = re.sub(r"(?:^|\s)//.*", "", file.read(), flags=re.MULTILINE)
             return json.loads(config)
         return default
+
     def save_json_file(
         self,
         filepath: str,
@@ -160,9 +151,7 @@ class FileHandler(DataStoreInterface):
     ):
         """Save a dictionary or string to a JSON file, creating directories if needed."""
         if relative_path:
-            filepath = os.path.join(
-                os.path.dirname(os.path.realpath(ROOT_DIRECTORY)), filepath
-            )
+            filepath = os.path.join(os.path.dirname(os.path.realpath(ROOT_DIRECTORY)), filepath)
         else:
             filepath = filepath
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
