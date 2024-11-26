@@ -42,6 +42,8 @@ class StableOrganizerApp:
         self.root.geometry("1920x1080")
         self.config_path = os.path.join(ROOT_DIRECTORY, "config.json")
         self.config_data = self.load_config()
+        self.lora_model_dir = self.config_data.get("lora_model_dir")
+        self.lora_png_dir = self.config_data.get("lora_png_dir")
         self.stack: Stack = Stack()
         self.info_handler: InfoHandler = InfoHandler(self.config_data)
         self.file_handler: FileHandler = FileHandler(self.config_data, self.stack)
@@ -403,10 +405,11 @@ class StableOrganizerApp:
         fallback_row = None
         parent_sort = set()
         for selection in selected_items:
-            selected_path = self.get_full_path(selection)
-            category, current_quality, lora_name = selected_path.split("\\")
             if not self.tree.item(selection, "values"):  # invalid row selection
                 continue
+            selected_path = self.get_full_path(selection)
+            category, current_quality, lora_name = selected_path.split("\\")
+
             item_values = list(self.tree.item(selection, "values"))
             current_lora_path = item_values[1]
             current_lora_name = os.path.basename(current_lora_path)
@@ -416,23 +419,21 @@ class StableOrganizerApp:
             current_png_dir = os.path.basename(current_png_path)
             if DEBUG:
                 logger.debug(f"cur_png_dir_path: {current_png_path}")
-            lora_model_root_path = self.get_setting("lora_model_dir")
-            lora_png_root_path = self.get_setting("lora_png_dir")
             lora_target_path = os.path.normpath(
                 os.path.join(
-                    lora_model_root_path,
+                    self.lora_model_dir,
                     f"{category}_{target_quality}",
                     current_lora_name,
                 )
             )
             lora_png_target_path = os.path.normpath(
-                os.path.join(lora_png_root_path, f"{category}_{target_quality}", current_png_dir)
+                os.path.join(self.lora_png_dir, f"{category}_{target_quality}", current_png_dir)
             )
             update_flag = False
             if current_lora_path != "None" and current_lora_path != lora_target_path:
                 if not os.path.exists(os.path.dirname(lora_target_path)):
-                    print(f"Target dir does not exist: {lora_target_path}")
-                    continue
+                    logger.exception(f"Target dir does not exist: {lora_target_path}")
+                    raise FileNotFoundError
                 if not self.file_handler.move(current_lora_path, lora_target_path, quiet=not DEBUG):
                     msgbox.showinfo(
                         f"Move Failed! {current_lora_path} => {lora_target_path}",
@@ -444,8 +445,8 @@ class StableOrganizerApp:
                 item_values[1] = lora_target_path
             if current_png_path != "None" and current_png_path != lora_png_target_path:
                 if not os.path.exists(os.path.dirname(lora_png_target_path)):
-                    print(f"Target dir does not exist: {lora_png_target_path}")
-                    continue
+                    logger.exception(f"Target dir does not exist: {lora_png_target_path}")
+                    raise FileNotFoundError
                 if not self.file_handler.move(current_png_path, lora_png_target_path, quiet=not DEBUG):
                     msgbox.showinfo(
                         f"Move Failed! {current_png_path} => {lora_png_target_path}",
