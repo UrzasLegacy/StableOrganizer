@@ -10,12 +10,11 @@ from tkinter import ttk
 from tkinter.filedialog import askdirectory
 
 from _dataclasses import DuplicateInfo, LoraEntry
-from handlers import (
-    CommandHandler,
-    FileHandler,
-    InfoHandler,
-    ModelDictHandler,
-)  # noqa: F401
+from handlers.FileHandler import FileHandler
+from handlers.InfoHandler import InfoHandler
+from handlers.ModelDictHandler import ModelDictHandler
+from handlers.CommandHandler import Stack
+
 from helpers import QUALITIES
 
 VERSION = 0.7
@@ -43,19 +42,15 @@ class StableOrganizerApp:
         self.root.geometry("1920x1080")
         self.config_path = os.path.join(ROOT_DIRECTORY, "config.json")
         self.config_data = self.load_config()
-
+        self.stack: Stack = Stack()
         self.info_handler: InfoHandler = InfoHandler(self.config_data)
-        self.file_handler: FileHandler = FileHandler(self.config_data)
-        self.model_dict_handler: ModelDictHandler = ModelDictHandler(
-            self.file_handler, self.config_data
-        )
+        self.file_handler: FileHandler = FileHandler(self.config_data, self.stack)
+        self.model_dict_handler: ModelDictHandler = ModelDictHandler(self.file_handler)
         # self.command_handler = CommandHandler()
         self.file_handler.initialize_lora_directories()
 
         self.lora_name_data = self.info_handler.collect_lora_name_data()
-        self.lora_dict = self.info_handler.get_unified_lora_dictionary(
-            self.lora_name_data
-        )
+        self.lora_dict = self.info_handler.get_unified_lora_dictionary(self.lora_name_data)
 
         self.SCROLL_MULTIPLIER = 20
 
@@ -79,9 +74,7 @@ class StableOrganizerApp:
         Returns:
             dict: Settings dictionary."""
         if os.path.exists(self.config_path):
-            config = self.file_handler.load_json_file(
-                self.config_path, default={}, relative_path=False
-            )
+            config = FileHandler.load_json_file(self.config_path, default={}, relative_path=False)
         else:
             self.initialize_default_config()
         return config
@@ -165,13 +158,9 @@ class StableOrganizerApp:
         lora_definitions = full_definitions.get("lora", {})
         self.tree.delete(*self.tree.get_children())
         for category, qualities in lora_dict.items():
-            category_id = self.tree.insert(
-                "", "end", text=category
-            )  # Insert category node
+            category_id = self.tree.insert("", "end", text=category)  # Insert category node
             for quality, loras in qualities.items():
-                quality_id = self.tree.insert(
-                    category_id, "end", text=quality
-                )  # Insert quality node
+                quality_id = self.tree.insert(category_id, "end", text=quality)  # Insert quality node
                 for lora_name, lora_entry in loras.items():
                     lora_entry: LoraEntry
                     lora_model_path = lora_entry.model_path
@@ -208,9 +197,7 @@ class StableOrganizerApp:
         file_menu = tk.Menu(menubar, tearoff=0)
         file_menu.add_command(label="Repopulate Tree", command=self.repopulate_tree)
         file_menu.add_command(label="Log Dicts", command=self.log_dicts)
-        file_menu.add_command(
-            label="HashSlingingSlasher", command=self.get_user_directory
-        )
+        file_menu.add_command(label="HashSlingingSlasher", command=self.get_user_directory)
         file_menu.add_command(label="Config", command=self.change_config)
         file_menu.add_command(
             label="Find Hanging PNG Directories",
@@ -224,15 +211,9 @@ class StableOrganizerApp:
     def create_context_menu(self) -> None:
         """Create a context menu."""
         self.context_menu = tk.Menu(self.root, tearoff=0)
-        self.context_menu.add_command(
-            label="Search with Everything", command=self._search_with_everything
-        )
-        self.context_menu.add_command(
-            label="Open Lora Parent Folder", command=self.open_lora_parent_directory
-        )
-        self.context_menu.add_command(
-            label="Open PNG Directory", command=self.open_png_directory
-        )
+        self.context_menu.add_command(label="Search with Everything", command=self._search_with_everything)
+        self.context_menu.add_command(label="Open Lora Parent Folder", command=self.open_lora_parent_directory)
+        self.context_menu.add_command(label="Open PNG Directory", command=self.open_png_directory)
         self.context_menu.add_separator()
         for quality in QUALITIES:
             if quality.lower() == "sfw":
@@ -244,9 +225,7 @@ class StableOrganizerApp:
                 command=lambda q=quality: self.move_pair_to_quality_directory(q),
                 accelerator=acc_key,
             )
-            self.root.bind_all(
-                acc_key, lambda event, q=quality: self.move_pair_to_quality_directory(q)
-            )
+            self.root.bind_all(acc_key, lambda event, q=quality: self.move_pair_to_quality_directory(q))
 
         # Create a submenu
         # submenu = tk.Menu(self.context_menu, tearoff=0)
@@ -267,9 +246,7 @@ class StableOrganizerApp:
         # Root binds
         self.root.bind("<Control-f>", self.on_ctrl_f_keypress)
         self.root.bind("<Escape>", self.on_escape_keypress)
-        self.root.bind(
-            "<Alt_L>", self.alt_pressed_keypress
-        )  # Keybindings for scroll speed control
+        self.root.bind("<Alt_L>", self.alt_pressed_keypress)  # Keybindings for scroll speed control
         self.root.bind("<KeyRelease-Alt_L>", self.alt_released_keypress)
         self.root.bind("<Up>", self.select_topmost_visible_leaf)
         self.root.bind("<Down>", self.select_topmost_visible_leaf)
@@ -401,11 +378,9 @@ class StableOrganizerApp:
             if len(selected_items) == 1:
                 self.tree.selection_set(item_id)
                 selected_items = self.tree.selection()
-
             for selection in selected_items:
                 if not self.tree.item(selection, "values"):  # invalid row selection
                     self.tree.selection_remove(selection)
-
             self.context_menu.post(event.x_root, event.y_root)
 
     def change_config(self):
@@ -422,9 +397,7 @@ class StableOrganizerApp:
         """Move selections to the target quality node within the appropriate category."""
         selected_items = self.tree.selection()
         if len(selected_items) > 1:
-            selected_items = sorted(
-                selected_items, key=lambda i_ind: self.tree.index(i_ind)
-            )
+            selected_items = sorted(selected_items, key=lambda i_ind: self.tree.index(i_ind))
         prev_row = self.tree.prev(selected_items[0])
         next_row = self.tree.next(selected_items[-1])
         fallback_row = None
@@ -453,59 +426,45 @@ class StableOrganizerApp:
                 )
             )
             lora_png_target_path = os.path.normpath(
-                os.path.join(
-                    lora_png_root_path, f"{category}_{target_quality}", current_png_dir
-                )
+                os.path.join(lora_png_root_path, f"{category}_{target_quality}", current_png_dir)
             )
             update_flag = False
             if current_lora_path != "None" and current_lora_path != lora_target_path:
                 if not os.path.exists(os.path.dirname(lora_target_path)):
                     print(f"Target dir does not exist: {lora_target_path}")
                     continue
-                if not self.file_handler.move(
-                    current_lora_path, lora_target_path, quiet=not DEBUG
-                ):
+                if not self.file_handler.move(current_lora_path, lora_target_path, quiet=not DEBUG):
                     msgbox.showinfo(
                         f"Move Failed! {current_lora_path} => {lora_target_path}",
                         "No matching Lora names found.",
                     )
                     continue
                 update_flag = True
-                logger.debug(
-                    f"Move Lora: {current_lora_path} =====> {lora_target_path}"
-                )
+                logger.debug(f"Move Lora: {current_lora_path} =====> {lora_target_path}")
                 item_values[1] = lora_target_path
             if current_png_path != "None" and current_png_path != lora_png_target_path:
                 if not os.path.exists(os.path.dirname(lora_png_target_path)):
                     print(f"Target dir does not exist: {lora_png_target_path}")
                     continue
-                if not self.file_handler.move(
-                    current_png_path, lora_png_target_path, quiet=not DEBUG
-                ):
+                if not self.file_handler.move(current_png_path, lora_png_target_path, quiet=not DEBUG):
                     msgbox.showinfo(
                         f"Move Failed! {current_png_path} => {lora_png_target_path}",
                         "No matching Lora names found.",
                     )
                     continue
                 update_flag = True
-                logger.debug(
-                    f"Move PNGs: {current_png_path} =====> {lora_png_target_path}"
-                )
+                logger.debug(f"Move PNGs: {current_png_path} =====> {lora_png_target_path}")
                 item_values[2] = lora_png_target_path
             if update_flag:
                 old_parent = self.tree.parent(selection)
                 new_parent = self.find_category_quality_node(category, target_quality)
-                updated_selection = self.move_and_update_row(
-                    selection, new_parent, tuple(item_values)
-                )
+                updated_selection = self.move_and_update_row(selection, new_parent, tuple(item_values))
                 if old_parent == new_parent:
                     fallback_row = updated_selection
                 parent_sort.add(new_parent)
         for parent in parent_sort:
             self.sort_children_simple(parent)
-        fallback_row = (
-            fallback_row if fallback_row else next_row if next_row else prev_row
-        )
+        fallback_row = fallback_row if fallback_row else next_row if next_row else prev_row
         if fallback_row:
             self.tree.selection_set(fallback_row)
             self.tree.focus(fallback_row)
@@ -536,32 +495,24 @@ class StableOrganizerApp:
         if self.tree.parent(selected_item_id) == new_parent:
             save_index = self.tree.index(selected_item_id)
         item_text = self.tree.item(selected_item_id, "text")  # The item's label/text
-        item_values = self.tree.item(
-            selected_item_id, "values"
-        )  # The item's associated values
+        item_values = self.tree.item(selected_item_id, "values")  # The item's associated values
         self.tree.delete(selected_item_id)
         values = tuple(new_values) if new_values else item_values
         lora_definition, lora_path, png_path = values
         if png_path and png_path != "None":
-            tags = (
-                ["dir_mismatch"]
-                if self.quality_mismatch(lora_path, png_path)
-                else ["has_imgs"]
-            )
+            tags = ["dir_mismatch"] if self.quality_mismatch(lora_path, png_path) else ["has_imgs"]
         else:
             tags = ["no_imgs"]
-        updated_selection = self.tree.insert(
-            new_parent, save_index, text=item_text, values=values, tags=tuple(tags)
-        )
+        updated_selection = self.tree.insert(new_parent, save_index, text=item_text, values=values, tags=tuple(tags))
         if DEBUG:
             print(f"Item moved to {new_parent} and updated with new values: {values}")
 
         return updated_selection
 
     def quality_mismatch(self, model_path, png_path):
-        return self.info_handler.get_quality_from_filepath(
-            model_path
-        ) != self.info_handler.get_quality_from_filepath(png_path)
+        return self.info_handler.get_quality_from_filepath(model_path) != self.info_handler.get_quality_from_filepath(
+            png_path
+        )
 
     def get_full_path(self, item_id) -> str:
         """Recursively retrieve the full tree path for a given Treeview item."""
@@ -585,23 +536,15 @@ class StableOrganizerApp:
         # Determine if we are sorting the special tree column (#0) or a regular column
         if col == "#0":
             leaf_nodes = [
-                (self.tree.item(child, "text"), child)
-                for child in children
-                if self.tree.item(child, "values")
+                (self.tree.item(child, "text"), child) for child in children if self.tree.item(child, "values")
             ]
         else:
-            leaf_nodes = [
-                (self.tree.set(child, col), child)
-                for child in children
-                if self.tree.item(child, "values")
-            ]
+            leaf_nodes = [(self.tree.set(child, col), child) for child in children if self.tree.item(child, "values")]
         leaf_nodes.sort(key=key, reverse=reverse)
         for index, (val, leaf) in enumerate(leaf_nodes):
             self.tree.move(leaf, parent, index)
         for child in children:
-            if self.tree.get_children(
-                child
-            ):  # Only recurse if the child has its own children
+            if self.tree.get_children(child):  # Only recurse if the child has its own children
                 self.sort_hierarchy_column(col, reverse, key, child)
         self.tree.heading(
             col,
@@ -611,11 +554,7 @@ class StableOrganizerApp:
     def sort_children_simple(self, parent_node, reverse=False) -> None:
         """Sort children of the parent node."""
         children = self.tree.get_children(parent_node)
-        children_with_values = [
-            (child, name)
-            for child in children
-            if (name := self.tree.item(child, "text"))
-        ]
+        children_with_values = [(child, name) for child in children if (name := self.tree.item(child, "text"))]
         children_with_values.sort(key=lambda x: x[1], reverse=reverse)
         for index, (child_id, _) in enumerate(children_with_values):
             self.tree.move(child_id, parent_node, index)
@@ -635,9 +574,7 @@ class StableOrganizerApp:
         search_entry = tk.Entry(search_window)
         search_entry.pack(pady=5)
         search_entry.focus_set()
-        search_entry.bind(
-            "<Return>", lambda event: self.search_and_redraw(search_entry.get())
-        )
+        search_entry.bind("<Return>", lambda event: self.search_and_redraw(search_entry.get()))
         tk.Button(
             search_window,
             text="Search",
@@ -671,9 +608,7 @@ class StableOrganizerApp:
             self.tree.focus_set()
             self.tree.see(matches[0])
         else:
-            msgbox.showinfo(
-                "No Matches", "No matching Lora names found.", parent=self.root
-            )
+            msgbox.showinfo("No Matches", "No matching Lora names found.", parent=self.root)
 
     def search_in_tree(self, search_query) -> None:
         """Search for the query in the Treeview and highlight the matching items."""
@@ -728,9 +663,7 @@ class StableOrganizerApp:
         filepath = values[1] if values else None
         if item_text and filepath:
             if not self.file_handler.open_to_file(filepath):
-                msgbox.showinfo(
-                    "Failed", f"No file exists for: {item_text}", parent=self.root
-                )
+                msgbox.showinfo("Failed", f"No file exists for: {item_text}", parent=self.root)
 
     def undo(self, event):
         self.file_handler.undo_move()

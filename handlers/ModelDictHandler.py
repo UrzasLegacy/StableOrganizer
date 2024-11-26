@@ -1,55 +1,38 @@
 """Utilities for the ModelDictionaries.json"""
 
-import logging
 import json
+import logging
 
-from handlers import DataStoreInterface
-from _dataclasses import CkptDefinition, LoraDefinition
+# from _dataclasses import CkptDefinition, LoraDefinition
+from handlers.Interfaces import DataStoreInterface
 
-
+# fmt: off
 DEFAULT_MODEL_DICT = {
     "lora": {
         "name": {
-            "DEFAULT_LORA": {
-                "POSITIVE": "",
-                "WEIGHT": "1.0",
-                "NEGATIVE": "",
-                "NULLIFIERS": "",
-                "NOTES": "",
-                "HASH": "0",
-                "FILEPATH": "",
-            },
+            "DEFAULT_LORA": {"POSITIVE": "", "WEIGHT": "1.0", "NEGATIVE": "", "NULLIFIERS": "", "NOTES": "", "HASH": "0", "FILEPATH": ""},
         },
-        "hash": {"0": "DEFAULT_LORA"},
+        "hash": {
+            "0": "DEFAULT_LORA"
+        },
     },
     "ckpt": {
         "name": {
-            "DEFAULT_CKPT": {
-                "SAMPLER_NAME": "euler_ancestral",
-                "SCHEDULER_NAME": "normal",
-                "STEPS": 30,
-                "CFG": 7,
-                "VAE_NAME": "sdxl_vae",
-                "POSITIVE": "score_9, score_8_up, score_7_up",
-                "NEGATIVE": "",
-                "NULLIFIER": "",
-                "ASPECT_RATIO": "",
-                "NOTES": "DEFAULT SETTINGS",
-                "HASH": "0",
-                "FILEPATH": "",
-            },
+            "DEFAULT_CKPT": { "SAMPLER_NAME": "euler_ancestral", "SCHEDULER_NAME": "normal", "STEPS": 30, "CFG": 7, "VAE_NAME": "sdxl_vae", "POSITIVE": "score_9, score_8_up, score_7_up", "NEGATIVE": "", "NULLIFIER": "", "ASPECT_RATIO": "", "NOTES": "DEFAULT SETTINGS", "HASH": "0", "FILEPATH": ""},
         },
-        "hash": {"0": "DEFAULT_CKPT"},
+        "hash": {
+            "0": "DEFAULT_CKPT"
+        },
     },
 }
+# fmt: on
+
 logger = logging.getLogger(__file__)
 
 
 class ModelDictHandler:
-    def __init__(self, data_store: DataStoreInterface, dict_path):
+    def __init__(self, data_store: DataStoreInterface):
         self.data_store = data_store
-        self.dict_path = dict_path
-
         self._initialize_model_dict()
 
     @property
@@ -57,20 +40,19 @@ class ModelDictHandler:
         return self.model_dict
 
     def _initialize_model_dict(self):
-        model_dictionary = self.data_store.load_data(self.dict_path)
+        self.model_dict = self.data_store.load_data()
         if not self._validate_model_dictionary():
             logger.exception(
                 "Can't initialize invalid root dictionary.", exc_info=1, stack_info=True
             )
             raise ValueError("Can't initialize invalid root dictionary.")
-        self.model_dict = model_dictionary
 
     def _load_model_dict(self):
-        return self.data_store.load_data(self.dict_path)
+        return self.data_store.load_data()
 
     def _save_model_dict(self):
         out_str = self.custom_format_dictionary()
-        return self.data_store.save_data(self.dict_path, out_str, preserve_string=True)
+        return self.data_store.save_data(out_str, preserve_string=True)
 
     def _validate_model_dictionary(self) -> bool:
         """Validates the structure of the root model dictionary for required keys and types.

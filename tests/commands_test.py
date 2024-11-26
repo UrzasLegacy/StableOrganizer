@@ -12,7 +12,6 @@ from handlers.CommandHandler import (
     FileMoveCommand,
     TreeMoveCommand,
 )
-from helpers import *
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -91,7 +90,7 @@ def test_stack_undo():
     command = CommandMock()
     stack.push(command)
     stack.undo()
-    assert command.undone == True
+    assert command.undone is True
     assert stack.commands == []
 
 
@@ -114,8 +113,8 @@ def test_composite_command_execute():
     command2 = CommandMock()
     composite = CompositeCommand([command1, command2])
     composite.execute()
-    assert command1.executed == True
-    assert command2.executed == True
+    assert command1.executed is True
+    assert command2.executed is True
 
 
 def test_composite_command_granular_undo():
@@ -125,8 +124,8 @@ def test_composite_command_granular_undo():
     composite.execute()
     command1.undo()
     command2.undo()
-    assert command1.undone == True
-    assert command2.undone == True
+    assert command1.undone is True
+    assert command2.undone is True
 
 
 def test_composite_command_atomic_undo():
@@ -135,8 +134,8 @@ def test_composite_command_atomic_undo():
     composite = CompositeCommand([command1, command2])
     composite.execute()
     composite.undo()
-    assert command1.undone == True
-    assert command2.undone == True
+    assert command1.undone is True
+    assert command2.undone is True
 
 
 def test_composite_command_execute_with_failure():
@@ -146,16 +145,16 @@ def test_composite_command_execute_with_failure():
     composite = CompositeCommand([command1, failing_command, command3])
     composite.execute()
     # command1 should have been executed and then undone
-    assert command1.executed == True
-    assert command1.undone == True
+    assert command1.executed is True
+    assert command1.undone is True
     # failing_command execution should have failed
-    assert failing_command.executed == True
+    assert failing_command.executed is True
     assert (
-        failing_command.undone == False
+        failing_command.undone is False
     )  # It wasn't undone because it didn't complete
     # command3 should not have been executed
-    assert command3.executed == False
-    assert command3.undone == False
+    assert command3.executed is False
+    assert command3.undone is False
 
 
 # region FileMoveCommand
@@ -441,7 +440,7 @@ def test_quality_mismatch_same_quality():
     model_path = "/models/Attire_Good/model.safetensors"
     png_path = "/images/Attire_Good/image.png"
     result = TreeMoveCommand.quality_mismatch(model_path, png_path)
-    assert result == False  # No mismatch
+    assert result is False  # No mismatch
 
 
 def test_quality_mismatch_different_quality():
@@ -449,7 +448,7 @@ def test_quality_mismatch_different_quality():
     model_path = "/models/Attire_Good/model.safetensors"
     png_path = "/images/Attire_Best/image.png"
     result = TreeMoveCommand.quality_mismatch(model_path, png_path)
-    assert result == True  # Mismatch
+    assert result is True  # Mismatch
 
 
 def test_quality_mismatch_one_missing():
@@ -457,7 +456,7 @@ def test_quality_mismatch_one_missing():
     model_path = "/models/Attire_Good/model.safetensors"
     png_path = "/images/unknown/image.png"
     result = TreeMoveCommand.quality_mismatch(model_path, png_path)
-    assert result == True  # Mismatch
+    assert result is True  # Mismatch
 
 
 def test_quality_mismatch_both_missing():
@@ -465,7 +464,7 @@ def test_quality_mismatch_both_missing():
     model_path = "/models/unknown/model.safetensors"
     png_path = "/images/unknown/image.png"
     result = TreeMoveCommand.quality_mismatch(model_path, png_path)
-    assert result == False  # No mismatch because both are "None"
+    assert result is False  # No mismatch because both are "None"
 
 
 def test_quality_mismatch_same_none():
@@ -473,7 +472,7 @@ def test_quality_mismatch_same_none():
     model_path = "/models/unknown/model.safetensors"
     png_path = "/images/unknown/image.png"
     result = TreeMoveCommand.quality_mismatch(model_path, png_path)
-    assert result == False  # No mismatch
+    assert result is False  # No mismatch
 
 
 def test_quality_mismatch_case_insensitive():
@@ -481,7 +480,7 @@ def test_quality_mismatch_case_insensitive():
     model_path = "/models/attire_good/model.safetensors"
     png_path = "/images/Attire_Good/image.png"
     result = TreeMoveCommand.quality_mismatch(model_path, png_path)
-    assert result == True  # Mismatch if case-sensitive
+    assert result is True  # Mismatch if case-sensitive
 
 
 def test_quality_mismatch_substring():
@@ -489,4 +488,4 @@ def test_quality_mismatch_substring():
     model_path = "/models/Attire_Good/model.safetensors"
     png_path = "/images/Attire_Goodness/image.png"
     result = TreeMoveCommand.quality_mismatch(model_path, png_path)
-    assert result == True  # Mismatch because "Attire_Good" != "None"
+    assert result is True  # Mismatch because "Attire_Good" != "None"

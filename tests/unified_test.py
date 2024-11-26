@@ -1,6 +1,6 @@
 import logging
 import pytest
-from handlers import InfoHandler, DuplicateInfo, LoraEntry
+from handlers.InfoHandler import InfoHandler, DuplicateInfo, LoraEntry
 import os
 import json
 
