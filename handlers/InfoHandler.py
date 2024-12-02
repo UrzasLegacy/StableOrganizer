@@ -55,6 +55,14 @@ class InfoHandler:
 
     # region Public Utils
 
+    def get_unified_ckpt_dictionary(self, lora_name_data=None) -> dict:
+        """Create a unified dictionary of ckpts with all available information, merging entries and tracking duplicates."""
+        if not lora_name_data:
+            lora_name_data = self.collect_lora_name_data()
+        unified_dict = self._build_unified_dict(lora_name_data)
+        self._cleanup_unified_dict(unified_dict)
+        return unified_dict
+
     def get_unified_lora_dictionary(self, lora_name_data=None) -> dict:
         """Create a unified dictionary of loras with all available information, merging entries and tracking duplicates."""
         if not lora_name_data:
