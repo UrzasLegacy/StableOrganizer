@@ -9,13 +9,13 @@ import tkinter.messagebox as msgbox
 from tkinter import ttk
 from tkinter.filedialog import askdirectory
 
-from _dataclasses import DuplicateInfo, LoraEntry
+from _dataclasses import DuplicateInfo, ModelEntry
 from handlers.FileHandler import FileHandler
 from handlers.InfoHandler import InfoHandler
 from handlers.ModelDictHandler import ModelDictHandler
 from handlers.CommandHandler import Stack, FileMoveCommand, TreeMoveCommand
 
-from helpers import QUALITIES
+from helpers import LORA_QUALITIES
 
 VERSION = 0.7
 ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -164,7 +164,7 @@ class StableOrganizerApp:
             for quality, loras in qualities.items():
                 quality_id = self.tree.insert(category_id, "end", text=quality)  # Insert quality node
                 for lora_name, lora_entry in loras.items():
-                    lora_entry: LoraEntry
+                    lora_entry: ModelEntry
                     lora_model_path = lora_entry.model_path
                     lora_png_path = lora_entry.png_path
                     duplicate_info: list[DuplicateInfo] = lora_entry.duplicates
@@ -217,7 +217,7 @@ class StableOrganizerApp:
         self.context_menu.add_command(label="Open Lora Parent Folder", command=self.open_lora_parent_directory)
         self.context_menu.add_command(label="Open PNG Directory", command=self.open_png_directory)
         self.context_menu.add_separator()
-        for quality in QUALITIES:
+        for quality in LORA_QUALITIES:
             if quality.lower() == "sfw":
                 acc_key = "f"
             else:
@@ -446,7 +446,7 @@ class StableOrganizerApp:
                 try:
                     results = self.stack.execute_queued_commands()
                 except Exception as e:
-                    logger.exception("Queue command failure in GUI %s", e, exc_info=1, stack_info=True)
+                    logger.exception("Queue command failure in GUI:ERROR: \n%s", e)
                     msgbox.showinfo(
                         f"Move Failed! {current_lora_path} => {lora_target_path}",
                         e,

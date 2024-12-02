@@ -15,7 +15,7 @@ class DuplicateInfo:
 
 
 @dataclass
-class LoraEntry:
+class ModelEntry:
     model_path: Optional[str]
     png_path: Optional[str]
     duplicates: List[DuplicateInfo] = field(default_factory=list)

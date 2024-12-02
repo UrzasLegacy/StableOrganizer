@@ -1,6 +1,6 @@
 import logging
 import pytest
-from handlers.InfoHandler import InfoHandler, DuplicateInfo, LoraEntry
+from handlers.InfoHandler import InfoHandler, DuplicateInfo, ModelEntry
 import os
 import json
 
@@ -53,21 +53,21 @@ def mock_data():
     expected_output = {
         "Attire": {
             "In": {
-                "Bike_Shorts_Attire": LoraEntry(
+                "Bike_Shorts_Attire": ModelEntry(
                     model_path="C:\\LoraModels\\Attire_In\\Pony_XL_Bike_Shorts_Attire.safetensors",
                     png_path="C:\\LoraCards\\Attire_Scoring\\Bike_Shorts_Attire_TestCards",
                     duplicates=[],
                 )
             },
             "CloseAnalysis": {
-                "T_Shirt_Attire": LoraEntry(
+                "T_Shirt_Attire": ModelEntry(
                     model_path="C:\\LoraModels\\Attire_CloseAnalysis\\T_Shirt_Attire.safetensors",
                     png_path="C:\\LoraCards\\Attire_CloseAnalysis\\T_Shirt_Attire_TestCards",
                     duplicates=[],
                 )
             },
             "SFW": {
-                "Hat_Attire": LoraEntry(
+                "Hat_Attire": ModelEntry(
                     model_path=None,
                     png_path="C:\\LoraCards\\Attire_SFW\\Hat_Attire_TestCards",
                     duplicates=[],
@@ -116,12 +116,12 @@ def test_merge_logic_with_missing_entries(mocker):
     expected_output = {
         "Attire": {
             "In": {
-                "Pants_Attire": LoraEntry(
+                "Pants_Attire": ModelEntry(
                     model_path="C:\\LoraModels\\Attire_In\\Pants_Attire.safetensors",
                     png_path=None,
                     duplicates=[],
                 ),
-                "Hat_Attire": LoraEntry(
+                "Hat_Attire": ModelEntry(
                     model_path=None,
                     png_path="C:\\LoraCards\\Attire_In\\Hat_Attire_TestCards",
                     duplicates=[],
@@ -193,7 +193,7 @@ def test_matching_lora_and_png_in_different_qualities(mocker):
     expected_output = {
         "Attire": {
             "Difficult": {
-                "Bike_Shorts_Attire": LoraEntry(
+                "Bike_Shorts_Attire": ModelEntry(
                     model_path="C:\\LoraModels\\Attire_Difficult\\Pony_XL_Bike_Shorts_Attire.safetensors",
                     png_path="C:\\LoraCards\\Attire_Scoring\\Bike_Shorts_Attire_TestCards",
                     duplicates=[],
@@ -242,7 +242,7 @@ def test_lora_first_in_png_then_in_lora(mocker):
     expected_output = {
         "Attire": {
             "Difficult": {
-                "Bike_Shorts_Attire": LoraEntry(
+                "Bike_Shorts_Attire": ModelEntry(
                     model_path="C:\\LoraModels\\Attire_Difficult\\Bike_Shorts_Attire.safetensors",
                     png_path="C:\\LoraCards\\Attire_In\\Bike_Shorts_Attire_TestCards",
                     duplicates=[],
@@ -290,7 +290,7 @@ def test_lora_first_in_lora_then_in_png(mocker):
     expected_output = {
         "Attire": {
             "In": {
-                "T_Shirt_Attire": LoraEntry(
+                "T_Shirt_Attire": ModelEntry(
                     model_path="C:\\LoraModels\\Attire_Difficult\\T_Shirt_Attire.safetensors",
                     png_path="C:\\LoraCards\\Attire_Best\\T_Shirt_Attire_TestCards",
                     duplicates=[],
@@ -338,7 +338,7 @@ def test_lora_and_png_in_same_quality(mocker):
     expected_output = {
         "Attire": {
             "Scoring": {
-                "Hat_Attire": LoraEntry(
+                "Hat_Attire": ModelEntry(
                     model_path="C:\\LoraModels\\Attire_Scoring\\Hat_Attire.safetensors",
                     png_path="C:\\LoraCards\\Attire_Scoring\\Hat_Attire_TestCards",
                     duplicates=[],
@@ -389,7 +389,7 @@ def test_lora_name_in_multiple_qualities(mocker):
     expected_output = {
         "Attire": {
             "Difficult": {
-                "Gloves_Attire": LoraEntry(
+                "Gloves_Attire": ModelEntry(
                     model_path="C:\\LoraModels\\Attire_Difficult\\Gloves_Attire.safetensors",
                     png_path="C:\\LoraCards\\Attire_Scoring\\Gloves_Attire_TestCards",
                     duplicates=[

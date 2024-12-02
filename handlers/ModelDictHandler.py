@@ -42,7 +42,7 @@ class ModelDictHandler:
     def _initialize_model_dict(self):
         self.model_dict = self.data_store.load_data()
         if not self._validate_model_dictionary():
-            logger.exception("Can't initialize invalid root dictionary.", exc_info=1, stack_info=True)
+            logger.exception("Can't initialize invalid root dictionary.")
             raise ValueError("Can't initialize invalid root dictionary.")
 
     def _load_model_dict(self):

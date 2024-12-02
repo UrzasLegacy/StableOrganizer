@@ -7,7 +7,7 @@ import threading
 import tkinter.messagebox as msgbox
 from abc import ABC, abstractmethod
 
-from helpers import CAT_QUAL_PATTERN
+from helpers import LORA_CAT_QUAL_PATTERN
 
 ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 log_file_path = os.path.join(ROOT_DIRECTORY, "debugging.log")
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class Stack:
     """A stack to manage commands, enabling undo functionality.
 
-    Methods:
+    Properties:
         history: list[str]
         queue: list[str]"""
 
@@ -75,9 +75,9 @@ class Stack:
                 self.command_queue.clear()
                 self.push(composite_cmd)
             except Exception as e:
-                logger.exception(f"Queued batch execution failed: {e}")
+                logger.debug("Queued batch execution failed")
                 composite_cmd.undo()
-                raise
+                raise e
             return results
 
 
@@ -99,27 +99,33 @@ class CommandResult:
     """Standardized command result.
 
     Parameters:
-        success: bool
-        data: any
-        details: str"""
+        success: bool = Only True when there's a result that can be undone. False doesn't necessarily mean critical error
+        data: any = Payload for commands that return a result to the executor
+        details: str = Error message would go here
+        error: Exception = If an error is raised, it'll be captured here for the higher function to re-raise"""
 
-    def __init__(self, success: bool, data=None, details: str = ""):
+    def __init__(self, success: bool, data=None, details: str = "", error: Exception = None):
         self.success = success
         self.data = data
         self.details = details
+        self.error = error
 
     def __repr__(self):
         return f"CommandResult(success={self.success}, data={self.data}, details={self.details})"
 
 
 class CompositeCommand(Command):
-    """A composite command that executes and undoes multiple commands as a single unit."""
+    """A composite command that executes and undoes multiple commands as a single unit.
+
+    Parameters:
+        commands: A list of Command objects to be executed/undone together.
+
+    Properties:
+        details: Description of the commands in this composite
+        result: CommandResult"""
+
 
     def __init__(self, commands):
-        """Initialize with a list of commands.
-
-        Parameters:
-            commands: A list of Command objects to be executed/undone together."""
         self.commands: list[Command] = commands
         self.results = []
 
@@ -142,32 +148,38 @@ class CompositeCommand(Command):
         results = []
         for command in self.commands:
             try:
-                result = command.execute()
-                executed_commands.append(command)
+                result: CommandResult = command.execute()
+                if result.success:
+                    executed_commands.append(command)
+                elif result.error:
+                    raise result.error
                 results.append(result)
             except Exception as e:
-                logger.exception(
-                    "Error executing command %s: %s", type(command).__name__, e, exc_info=1, stack_info=True
-                )
-                for command in reversed(executed_commands):
-                    command.undo()
-                raise
+                try:
+                    for command in reversed(executed_commands):
+                        command.undo()
+                except Exception as e2:
+                    return CommandResult(False, None, "CompositeCommand", e2)
+                return CommandResult(False, None, "exec:CompositeCommand", e)
         self.commands = executed_commands
         self.results = results
-        return CommandResult(True, self.results)
+        return CommandResult(True, self.results, "CompositeCommand")
 
     def undo(self):
+        errors = []
         for command in reversed(self.commands):
             try:
                 command.undo()
             except Exception as e:
-                logger.exception("Error undoing %s: %s", type(command).__name__, e, exc_info=1, stack_info=True)
-                raise
+                logger.warning("Error during undo: %s", e)
+                errors.append(str(e))
+        if errors:
+            return CommandResult(False, None, f"Undo composite errors: {', '.join(errors)}")
         self.results.clear()
 
 
 class FileMoveCommand(Command):
-    """Move a file and store previous state.
+    """Move a file, store previous state and result.
 
     Parameters:
         src_file: Source path of file.
@@ -176,25 +188,17 @@ class FileMoveCommand(Command):
     Returns:
         True if successful
 
-    Raises:
-        ValueError | FileExistsError
     """
 
     def __init__(self, source_path: str, destination_path: str):
-        """Initialize the command with source and destination paths.
-
-        Parameters:
-            source_path (str): The path of the source file.
-            destination_path (str): The path to move the file to."""
-
-        self.source_path = source_path
-        self.destination_path = destination_path
+        self.source_path = os.path.normpath(source_path)
+        self.destination_path = os.path.normpath(destination_path)
         self.target_path = None
         self._result = None
 
     @property
     def details(self) -> str:
-        return f"{self.source_path} => {self.destination_path}"
+        return f"file_mv:{self.source_path} => {self.destination_path}"
 
     @property
     def result(self) -> str:
@@ -202,62 +206,74 @@ class FileMoveCommand(Command):
 
     def execute(self):
         """Executes the move operation (moves the file from src to dest)."""
-        if not os.path.exists(self.source_path):
-            msgbox.showinfo("File not found", f"{self.source_path}")
-            raise ValueError(f"File not found: {self.source_path}")
-        if self.source_path == self.destination_path:
-            raise ValueError(f"Cancel move (src == dest): {self.source_path} => {self.destination_path}")
-        dest_is_dir = os.path.isdir(self.destination_path)
-        dest_exists = os.path.exists(self.destination_path)
-        if dest_exists and not dest_is_dir:
-            msgbox.showinfo("Destination file already exists: No movement", f"{self.destination_path}")
-            self._result = CommandResult(
-                True, None, f"Destination file already exists: No movement: {self.destination_path}"
-            )
-            return self._result  # TODO user option to replace?
-        self.target_path = (
-            os.path.join(self.destination_path, os.path.basename(self.source_path))
-            if dest_is_dir
-            else self.destination_path
-        )
-        if os.path.exists(self.target_path):
-            msgbox.showinfo("Destination file already exists: No movement", f"{self.destination_path}")
-            self._result = CommandResult(
-                True, None, f"Destination file already exists: No movement: {self.destination_path}"
-            )
-            return self._result  # TODO user option to replace?
-
-        parent_dir = os.path.dirname(self.target_path)
-        os.makedirs(parent_dir, exist_ok=True)
         try:
+            if not os.path.exists(self.source_path):
+                logger.warning("File not found: %s", self.source_path)
+                return CommandResult(False, None, f"File not found: {self.details}")
+            if self.source_path == self.destination_path:
+                logger.info("No movement needed: Source and destination are the same.")
+                return CommandResult(False, None, "No movement, src == dest")
+            dest_is_dir = os.path.isdir(self.destination_path)
+            dest_exists = os.path.exists(self.destination_path)
+            if dest_exists and not dest_is_dir:
+                msgbox.showinfo("Dest file already exists: No movement", f"{self.destination_path}")
+                self._result = CommandResult(
+                    False, None, f"Dest file already exists: No movement: {self.destination_path}"
+                )
+                return self._result  # TODO user option to replace?
+            self.target_path = (
+                os.path.join(self.destination_path, os.path.basename(self.source_path))
+                if dest_is_dir
+                else self.destination_path
+            )
+            if os.path.exists(self.target_path):
+                logger.warning("Destination file exists: %s", self.target_path)
+                self._result = CommandResult(
+                    False, None, f"Dest file already exists: No movement2: {self.destination_path}"
+                )
+                return self._result  # TODO user option to replace?
+            parent_dir = os.path.dirname(self.target_path)
+            os.makedirs(parent_dir, exist_ok=True)
             shutil.move(self.source_path, self.target_path)
             logger.debug("File\tmoved %s to %s", self.source_path, self.target_path)
             self._result = CommandResult(True, None, self.details)
             return self._result
         except Exception as e:
-            msgbox.showinfo("File move failed!", f"{self.destination_path}\n{e}")
-            self._result = CommandResult(False, None, f"File move failed: {self.destination_path}\n{e}")
+            logger.exception("Unexpected error during file move: %s", self.details)
+            self._result = CommandResult(False, None, f"Uncaught error:exec:{self.details}", e)
             return self._result
 
     def undo(self):
         """Reverses the move operation."""
-        if os.path.exists(self.target_path):
-            os.makedirs(os.path.dirname(self.source_path), exist_ok=True)
-            if os.path.exists(self.source_path):
-                raise FileExistsError(f"Cannot undo move: Source file already exists at {self.source_path}")
-            try:
-                shutil.move(self.target_path, self.source_path)
-                logger.debug(
-                    "Undo file\tmove: %s back to %s",
-                    self.target_path,
-                    self.source_path,
-                )
-                self.target_path = None
-                self._result = None
-            except Exception as e:
-                raise ValueError(f"Error undoing move {self.details}: {e}")
-        else:
-            raise ValueError(f"Undo failed: File does not exist at source: {self.details}")
+        try:
+            if os.path.exists(self.target_path):
+                os.makedirs(os.path.dirname(self.source_path), exist_ok=True)
+                if os.path.exists(self.source_path):
+                    msgbox.showinfo("File undo failed", f"Cannot undo move: Source file already exists\n{self.details}")
+                    self._result = CommandResult(
+                        False, None, f"Cannot undo move: Source file already exists\n{self.details}"
+                    )
+                    return self._result
+                try:
+                    shutil.move(self.target_path, self.source_path)
+                    logger.debug(
+                        "Undo file\tmove: %s back to %s",
+                        self.target_path,
+                        self.source_path,
+                    )
+                    self.target_path = None
+                    self._result = None
+                except Exception as e:
+                    msgbox.showinfo("File undo error", f"Error undoing move {self.details}")
+                    self._result = CommandResult(False, None, f"Error undoing move: {self.details}", e)
+                    return self._result
+            else:
+                msgbox.showinfo("File undo error", f"Undo failed: File does not exist at source: {self.details}")
+                self._result = CommandResult(False, None, f"Undo failed: File does not exist at source: {self.details}")
+                return self._result
+        except Exception as e:
+            msgbox.showinfo("Uncaught error", f"{self.details}")
+            self._result = CommandResult(False, None, f"Uncaught error:undo:{self.details}", e)
 
 
 class TreeMoveCommand(Command):
@@ -269,11 +285,8 @@ class TreeMoveCommand(Command):
         new_parent: The new parent ID (or '' for the root).
         new_index: The new position index under the new parent.
 
-    Results:
-        New row id
-
-    Exceptions:
-        ValueError"""
+    Returns:
+        New row id"""
 
     def __init__(self, tree, item_id, new_parent, new_values):
         # if not tree.exists(item_id):
@@ -291,7 +304,7 @@ class TreeMoveCommand(Command):
 
     @property
     def details(self) -> str:
-        return f"{self.item_text}: {self.old_values} => {self.new_values}"
+        return f"row_mv:{self.item_text}: {self.old_values} => {self.new_values}"
 
     @property
     def result(self) -> str:
@@ -299,78 +312,77 @@ class TreeMoveCommand(Command):
 
     def execute(self):
         """Move treeview entry and refresh its values."""
-        if not self.item_id:
-            logger.error("Execute command failure (item ID doesn't exist) in TreeMoveCommand: %s", self.item_text)
-            msgbox.showinfo(
-                "Command Failed! Item ID error.",
-                f"{self.item_text}",
+        try:
+            if not self.item_id:
+                msgbox.showinfo("Command Failed! Item ID error.", f"exec:{self.details}")
+                self._result = CommandResult(False, None, f"exec:Item ID error:{self.details}")
+                return self._result
+            if self.tree.parent(self.item_id) == self.new_parent:
+                self.new_index = self.old_index
+            if self.new_values == self.old_values and self.tree.parent(self.item_id) == self.new_parent:
+                return None
+            self.tree.delete(self.item_id)
+            values = tuple(self.new_values) if self.new_values else tuple(self.old_values)
+            if len(values) < 3:
+                msgbox.showinfo(
+                    "Command Failed! Row value length error.",
+                    f"exec:{self.details}",
+                )
+                self._result = CommandResult(False, None, f"exec:Row value length error:{self.details}")
+                return self._result
+            lora_definition, lora_path, png_path = values
+            if png_path and png_path != "None":
+                tags = ["dir_mismatch"] if TreeMoveCommand.quality_mismatch(lora_path, png_path) else ["has_imgs"]
+            else:
+                tags = ["no_imgs"]
+            updated_selection = self.tree.insert(
+                self.new_parent,
+                self.new_index,
+                text=self.item_text,
+                values=values,
+                tags=tuple(tags),
             )
-            self._result = CommandResult(False, None, self.details)
-            return self._result
-        if self.tree.parent(self.item_id) == self.new_parent:
-            self.new_index = self.old_index
-        if self.new_values == self.old_values and self.tree.parent(self.item_id) == self.new_parent:
-            return None
-        self.tree.delete(self.item_id)
-        values = tuple(self.new_values) if self.new_values else tuple(self.old_values)
-        if len(values) < 3:
-            logger.error("Execute command failure (row value length error) in TreeMoveCommand: %s", self.item_text)
-            msgbox.showinfo(
-                "Command Failed! Row value length error.",
-                f"{self.item_text}",
+            self.item_id = updated_selection
+            self._result = CommandResult(True, self.item_id, self.details)
+            logger.debug(
+                f"Row\tmoved to \"{self.tree.item(self.new_parent, 'text')}\" and updated with new values: {values}"
             )
-            self._result = CommandResult(False, None, self.details)
             return self._result
-        lora_definition, lora_path, png_path = values
-        if png_path and png_path != "None":
-            tags = ["dir_mismatch"] if TreeMoveCommand.quality_mismatch(lora_path, png_path) else ["has_imgs"]
-        else:
-            tags = ["no_imgs"]
-        updated_selection = self.tree.insert(
-            self.new_parent,
-            self.new_index,
-            text=self.item_text,
-            values=values,
-            tags=tuple(tags),
-        )
-        self.item_id = updated_selection
-        self._result = CommandResult(True, self.item_id, self.details)
-        logger.debug(
-            f"Row\tmoved to \"{self.tree.item(self.new_parent, 'text')}\" and updated with new values: {values}"
-        )
-        return self._result
+        except Exception as e:
+            msgbox.showinfo("Uncaught error", f"exec:{self.details}")
+            return CommandResult(False, None, f"Uncaught error:exec:{self.details}", e)
 
     def undo(self):
         """Reverses the move operation (moves the Treeview item back to its original location)."""
-        if self.tree.parent(self.item_id) == self.old_parent:
-            self.new_index = self.old_index
-        if self.old_values == self.new_values and self.tree.parent(self.item_id) == self.old_parent:
-            return CommandResult(True, None, "No movement")
-        self.tree.delete(self.item_id)
-        values = tuple(self.old_values)
-        if len(values) < 3:
-            logger.error("Undo command failure (row value length error) in TreeMoveCommand: %s", self.item_text)
-            msgbox.showinfo(
-                "Undo Failed! Row value length error.",
-                f"{self.item_text}",
+        try:
+            if self.tree.parent(self.item_id) == self.old_parent:
+                self.new_index = self.old_index
+            if self.old_values == self.new_values and self.tree.parent(self.item_id) == self.old_parent:
+                return CommandResult(True, None, "undo:No movement")
+            self.tree.delete(self.item_id)
+            values = tuple(self.old_values)
+            if len(values) < 3:
+                msgbox.showinfo("Undo Failed! Row value length error.", f"undo:{self.details}")
+                return CommandResult(False, None, f"undo:Row value length error:{self.details}")
+            lora_definition, lora_path, png_path = values
+            if png_path and png_path != "None":
+                tags = ["dir_mismatch"] if TreeMoveCommand.quality_mismatch(lora_path, png_path) else ["has_imgs"]
+            else:
+                tags = ["no_imgs"]
+            updated_selection = self.tree.insert(
+                self.old_parent,
+                self.new_index,
+                text=self.item_text,
+                values=values,
+                tags=tuple(tags),
             )
-            return CommandResult(False, None, self.details)
-        lora_definition, lora_path, png_path = values
-        if png_path and png_path != "None":
-            tags = ["dir_mismatch"] if TreeMoveCommand.quality_mismatch(lora_path, png_path) else ["has_imgs"]
-        else:
-            tags = ["no_imgs"]
-        updated_selection = self.tree.insert(
-            self.old_parent,
-            self.new_index,
-            text=self.item_text,
-            values=values,
-            tags=tuple(tags),
-        )
-        self.item_id = updated_selection
-        logger.debug(
-            f"Undo row\tmove: {self.new_parent} back to \"{self.tree.item(self.old_parent, 'text')}\" and updated with new values: {values}"
-        )
+            self.item_id = updated_selection
+            logger.debug(
+                f"Undo row\tmove: {self.new_parent} back to \"{self.tree.item(self.old_parent, 'text')}\" and updated with new values: {values}"
+            )
+        except Exception as e:
+            msgbox.showinfo("Uncaught error", f"undo:{self.details}")
+            return CommandResult(False, None, f"Uncaught error:undo:{self.details}", e)
 
     @staticmethod
     def quality_mismatch(model_path: str, png_path: str) -> bool:
@@ -382,5 +394,5 @@ class TreeMoveCommand(Command):
     @staticmethod
     def get_quality_from_filepath(filepath: str) -> str:
         """Get the quality from directory or safetensors/png files."""
-        match = CAT_QUAL_PATTERN.search(filepath)
+        match = LORA_CAT_QUAL_PATTERN.search(filepath)
         return match.group() if match else "None"

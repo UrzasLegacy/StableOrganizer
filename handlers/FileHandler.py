@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import re
 
-from helpers import CATEGORIES, QUALITIES, ROOT_DIRECTORY
+from helpers import LORA_CATEGORIES, LORA_QUALITIES, ROOT_DIRECTORY
 from handlers.CommandHandler import Stack, FileMoveCommand
 from handlers.Interfaces import DataStoreInterface
 
@@ -52,15 +52,13 @@ class FileHandler(DataStoreInterface):
                 # logger.info("Created %s directory.", parent_dir)
             except Exception as e:
                 logger.exception(
-                    "Error creating %s directory: %s",
+                    "Error creating %s directory:\nERROR %s",
                     parent_dir,
-                    e,
-                    exc_info=1,
-                    stack_info=True,
+                    e
                 )
 
-        for category in CATEGORIES:
-            for quality in QUALITIES:
+        for category in LORA_CATEGORIES:
+            for quality in LORA_QUALITIES:
                 dir_name = f"{category}_{quality}"
                 dir_path = os.path.join(parent_dir, dir_name)
                 if not os.path.exists(dir_path):
@@ -69,11 +67,9 @@ class FileHandler(DataStoreInterface):
                         # logger.info("Created %s directory.", dir_name)
                     except Exception as e:
                         logger.exception(
-                            "Error creating %s directory: %s",
+                            "Error creating %s directory:\nERROR %s",
                             dir_name,
-                            e,
-                            exc_info=1,
-                            stack_info=True,
+                            e
                         )
 
     # region ModelDictHandler Interface Methods
