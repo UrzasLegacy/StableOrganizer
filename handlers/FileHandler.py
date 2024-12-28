@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import re
 
-from helpers import LORA_CATEGORIES, LORA_QUALITIES, ROOT_DIRECTORY
+from helpers import LORA_CATEGORIES, LORA_QUALITIES, CKPT_CATEGORIES, CKPT_QUALITIES, ROOT_DIRECTORY
 from handlers.CommandHandler import Stack, FileMoveCommand
 from handlers.Interfaces import DataStoreInterface
 
@@ -34,17 +34,20 @@ class FileHandler(DataStoreInterface):
     def __init__(self, config_data: dict = None, stack: Stack = None) -> None:
         self.lora_model_dir = config_data.get("lora_model_dir")
         self.lora_png_dir = config_data.get("lora_png_dir")
+        self.ckpt_model_dir = config_data.get("ckpt_model_dir")
+        self.ckpt_png_dir = config_data.get("ckpt_png_dir")
         self.model_dict_path = config_data.get("model_dict_path")
         self.output_dir = config_data.get("output_dir")
         self.stack = stack
 
-    def initialize_lora_directories(self) -> None:
-        """Create lora subdirectories."""
-        # logger.info("Initializing Lora png directories.")
-        self._initialize_lora_directory(self.lora_png_dir)
-        self._initialize_lora_directory(self.lora_model_dir)
+    def initialize_directories(self) -> None:
+        """Create model subdirectories."""
+        self._initialize_model_directory(self.lora_png_dir, LORA_CATEGORIES, LORA_QUALITIES)
+        self._initialize_model_directory(self.lora_model_dir, LORA_CATEGORIES, LORA_QUALITIES)
+        self._initialize_model_directory(self.ckpt_png_dir, CKPT_CATEGORIES, CKPT_QUALITIES)
+        self._initialize_model_directory(self.ckpt_model_dir, CKPT_CATEGORIES, CKPT_QUALITIES)
 
-    def _initialize_lora_directory(self, parent_dir: str) -> None:
+    def _initialize_model_directory(self, parent_dir: str, categories: list, qualities: list) -> None:
         """Create subdirectories by category and quality."""
         if not os.path.exists(parent_dir):
             try:
@@ -56,9 +59,8 @@ class FileHandler(DataStoreInterface):
                     parent_dir,
                     e
                 )
-
-        for category in LORA_CATEGORIES:
-            for quality in LORA_QUALITIES:
+        for category in categories:
+            for quality in qualities:
                 dir_name = f"{category}_{quality}"
                 dir_path = os.path.join(parent_dir, dir_name)
                 if not os.path.exists(dir_path):
