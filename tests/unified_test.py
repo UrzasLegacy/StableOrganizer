@@ -81,10 +81,10 @@ def mock_data():
 def test_get_unified_lora_dictionary(mock_data, mocker):
     lora_dict, png_dict, expected_output = mock_data
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_model_dictionary", return_value=lora_dict
     )
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_png_dictionary", return_value=png_dict
     )
     mocker.patch(
         "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
@@ -131,10 +131,10 @@ def test_merge_logic_with_missing_entries(mocker):
     }
 
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_model_dictionary", return_value=lora_dict
     )
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_png_dictionary", return_value=png_dict
     )
     mocker.patch(
         "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
@@ -157,10 +157,10 @@ def test_empty_dictionaries(mocker):
     expected_output = {}
 
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_model_dictionary", return_value=lora_dict
     )
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_png_dictionary", return_value=png_dict
     )
     mocker.patch(
         "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
@@ -203,10 +203,10 @@ def test_matching_lora_and_png_in_different_qualities(mocker):
     }
 
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_model_dictionary", return_value=lora_dict
     )
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_png_dictionary", return_value=png_dict
     )
     mocker.patch(
         "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
@@ -252,10 +252,10 @@ def test_lora_first_in_png_then_in_lora(mocker):
     }
 
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_model_dictionary", return_value=lora_dict
     )
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_png_dictionary", return_value=png_dict
     )
     mocker.patch(
         "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
@@ -300,10 +300,10 @@ def test_lora_first_in_lora_then_in_png(mocker):
     }
 
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_model_dictionary", return_value=lora_dict
     )
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_png_dictionary", return_value=png_dict
     )
     mocker.patch(
         "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
@@ -348,10 +348,10 @@ def test_lora_and_png_in_same_quality(mocker):
     }
 
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_model_dictionary", return_value=lora_dict
     )
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_png_dictionary", return_value=png_dict
     )
     mocker.patch(
         "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
@@ -406,10 +406,10 @@ def test_lora_name_in_multiple_qualities(mocker):
     }
 
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_model_dictionary", return_value=lora_dict
     )
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_png_dictionary", return_value=png_dict
     )
     mocker.patch(
         "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
@@ -464,10 +464,10 @@ def test_png_without_lora_gets_merged_when_lora_is_found(mocker):
     }
 
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_lora_dictionary", return_value=lora_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_model_dictionary", return_value=lora_dict
     )
     mocker.patch(
-        "handlers.InfoHandler.InfoHandler.build_png_dictionary", return_value=png_dict
+        "handlers.InfoHandler.InfoHandler.build_lora_png_dictionary", return_value=png_dict
     )
     mocker.patch(
         "handlers.InfoHandler.InfoHandler.initialize_dictionary_template",
