@@ -49,10 +49,19 @@ class StableOrganizerApp:
         self.file_handler: FileHandler = FileHandler(self.config_data, self.stack)
         self.model_dict_handler: ModelDictHandler = ModelDictHandler(self.file_handler)
         # self.command_handler = CommandHandler()
-        self.file_handler.initialize_lora_directories()
+        self.file_handler.initialize_directories()
 
-        self.lora_name_data = self.info_handler.collect_lora_name_data()
+        self.built_lora_model_dict = self.info_handler.build_lora_model_dictionary()
+        self.built_lora_png_dict = self.info_handler.build_lora_png_dictionary()
+        self.built_ckpt_model_dict = self.info_handler.build_ckpt_model_dictionary()
+        self.built_ckpt_png_dict = self.info_handler.build_ckpt_png_dictionary()
+
+        self.lora_name_data = self.info_handler.collect_model_name_data(self.built_lora_model_dict, self.built_lora_png_dict)
         self.lora_dict = self.info_handler.get_unified_lora_dictionary(self.lora_name_data)
+        self.ckpt_name_data = self.info_handler.collect_model_name_data(self.built_ckpt_model_dict, self.built_ckpt_png_dict)
+        self.ckpt_dict = self.info_handler.get_unified_ckpt_dictionary(self.ckpt_name_data)
+
+        self.unified_dict = self.info_handler.get_unified_dictionary(self.lora_dict, self.ckpt_dict)
 
         self.SCROLL_MULTIPLIER = 20
 
@@ -61,7 +70,7 @@ class StableOrganizerApp:
         self.create_context_menu()
         self.create_tree()
         self.set_keybinds()
-        self.populate_tree(self.lora_dict)
+        self.populate_tree(self.unified_dict)
 
     # ============================================================================================================================================
     # region                                                         Configuration                                                           =
@@ -107,7 +116,7 @@ class StableOrganizerApp:
 
         self.tree = ttk.Treeview(
             frame,
-            columns=("definition", "lora_path", "png_path"),
+            columns=("definition", "model_path", "png_path"),
             show="tree headings",
             yscrollcommand=vertical_scrollbar.set,
         )
@@ -115,21 +124,21 @@ class StableOrganizerApp:
         # Define column properties (widths and stretchable behavior)
         self.tree.column("#0", width=300, stretch=False)  # Main column (Lora name)
         self.tree.column("definition", width=500, stretch=True)  # PNG directory path
-        self.tree.column("lora_path", width=100, stretch=True)  # Lora file path
+        self.tree.column("model_path", width=100, stretch=True)  # Lora file path
         self.tree.column("png_path", width=100, stretch=True)  # PNG directory path
 
         # Set headings (this is optional, but useful for understanding columns)
         self.tree.heading(
             "#0",
-            text="Lora Name",
+            text="Model Name",
             anchor="w",
             command=lambda _col="#0": self.sort_hierarchy_column(_col, False),
         )
         self.tree.heading(
-            "lora_path",
-            text="Lora Path",
+            "model_path",
+            text="Model Path",
             anchor="w",
-            command=lambda _col="lora_path": self.sort_hierarchy_column(_col, False),
+            command=lambda _col="model_path": self.sort_hierarchy_column(_col, False),
         )
         self.tree.heading(
             "png_path",
@@ -139,7 +148,7 @@ class StableOrganizerApp:
         )
         self.tree.heading(
             "definition",
-            text="Lora Definition",
+            text="Model Definition",
             anchor="w",
             command=lambda _col="definition": self.sort_hierarchy_column(_col, False),
         )
@@ -154,44 +163,46 @@ class StableOrganizerApp:
         vertical_scrollbar.config(command=self.tree.yview)
         self.tree.configure(yscrollcommand=vertical_scrollbar.set)
 
-    def populate_tree(self, lora_dict) -> None:
+    def populate_tree(self, unified_dict) -> None:
         """Populate the treeview with categories, qualities, and Lora names from the built dictionaries."""
         full_definitions = self.file_handler.load_json_file("AliDictionaries.json")
         lora_definitions = full_definitions.get("lora", {})
         self.tree.delete(*self.tree.get_children())
-        for category, qualities in lora_dict.items():
-            category_id = self.tree.insert("", "end", text=category)  # Insert category node
-            for quality, loras in qualities.items():
-                quality_id = self.tree.insert(category_id, "end", text=quality)  # Insert quality node
-                for lora_name, lora_entry in loras.items():
-                    lora_entry: ModelEntry
-                    lora_model_path = lora_entry.model_path
-                    lora_png_path = lora_entry.png_path
-                    duplicate_info: list[DuplicateInfo] = lora_entry.duplicates
-                    if lora_model_path and lora_model_path != "None":
-                        if lora_png_path and lora_png_path != "None":
-                            tags = (
-                                ["dir_mismatch"]
-                                if self.quality_mismatch(lora_model_path, lora_png_path)
-                                else ["has_imgs"]
-                            )
+        for model_type, model_dict in unified_dict.items():
+            model_type_id = self.tree.insert("", "end", text=model_type)  # Insert model type node
+            for category, qualities in model_dict.items():
+                category_id = self.tree.insert(model_type_id, "end", text=category)  # Insert category node
+                for quality, loras in qualities.items():
+                    quality_id = self.tree.insert(category_id, "end", text=quality)  # Insert quality node
+                    for lora_name, lora_entry in loras.items():
+                        lora_entry: ModelEntry
+                        lora_model_path = lora_entry.model_path
+                        lora_png_path = lora_entry.png_path
+                        duplicate_info: list[DuplicateInfo] = lora_entry.duplicates
+                        if lora_model_path and lora_model_path != "None":
+                            if lora_png_path and lora_png_path != "None":
+                                tags = (
+                                    ["dir_mismatch"]
+                                    if self.quality_mismatch(lora_model_path, lora_png_path)
+                                    else ["has_imgs"]
+                                )
+                            else:
+                                tags = ["no_imgs"]
                         else:
-                            tags = ["no_imgs"]
-                    else:
-                        tags = ["no_model"]
-                    if len(duplicate_info):
-                        tags.append("has_duplicates")
-                    self.tree.insert(
-                        quality_id,
-                        "end",
-                        text=lora_name,
-                        values=(
-                            lora_definitions.get(lora_name, "None"),
-                            lora_model_path,
-                            lora_png_path,
-                        ),
-                        tags=tuple(tags),
-                    )  # Insert Lora name
+                            tags = ["no_model"]
+                        if len(duplicate_info):
+                            tags.append("has_duplicates")
+                        self.tree.insert(
+                            quality_id,
+                            "end",
+                            text=lora_name,
+                            values=(
+                                lora_definitions.get(lora_name, "None"),
+                                lora_model_path,
+                                lora_png_path,
+                            ),
+                            tags=tuple(tags),
+                        )  # Insert Lora name
 
     def create_menu(self) -> None:
         """Create a File menu at the top of the window."""
@@ -353,8 +364,8 @@ class StableOrganizerApp:
     # ============================================================================================================================================
 
     def repopulate_tree(self) -> None:
-        self.lora_dict = self.info_handler.get_unified_lora_dictionary()
-        self.populate_tree(self.lora_dict)
+        self.unified_dict = self.info_handler.get_unified_dictionary()
+        self.populate_tree(self.unified_dict)
 
     def log_dicts(self) -> None:
         """Write dictionaries to file for review."""
@@ -577,20 +588,22 @@ class StableOrganizerApp:
 
     def search_and_redraw(self, search_query: str) -> None:
         """Search for the query and redraw the Treeview with only the matches."""
-        filtered_lora_dict = {}
+        filtered_dict = {}
         search_query = search_query.lower()
         self.tree.delete(*self.tree.get_children())
-        for category, qualities in self.lora_dict.items():
-            if category not in filtered_lora_dict:
-                filtered_lora_dict[category] = {}
-            for quality, loras in qualities.items():
-                if quality not in filtered_lora_dict:
-                    filtered_lora_dict[category][quality] = {}
-                for lora_key, lora_paths in loras.items():
-                    if search_query in lora_key.lower():
-                        filtered_lora_dict[category][quality][lora_key] = lora_paths
-
-        self.populate_tree(filtered_lora_dict)
+        for model_type, model_dict in self.unified_dict.items():
+            if model_type not in filtered_dict:
+                filtered_dict[model_type] = {}
+            for category, qualities in model_dict.items():
+                if category not in filtered_dict:
+                    filtered_dict[category] = {}
+                for quality, loras in qualities.items():
+                    if quality not in filtered_dict:
+                        filtered_dict[category][quality] = {}
+                    for model_key, model_paths in loras.items():
+                        if search_query in model_key.lower():
+                            filtered_dict[category][quality][model_key] = model_paths
+        self.populate_tree(filtered_dict)
 
     def search_and_highlight(self, search_query) -> None:
         """Searches for Lora names and highlights matching items."""
