@@ -7,7 +7,7 @@ from dataclasses import is_dataclass
 from itertools import product
 
 from _dataclasses import ModelEntry, DuplicateInfo
-from helpers import LORA_CATEGORIES, LORA_QUALITIES
+from helpers import LORA_CATEGORIES, LORA_QUALITIES, CKPT_CATEGORIES, CKPT_QUALITIES
 
 
 ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -55,57 +55,69 @@ class InfoHandler:
 
     # region Public Utils
 
-    def get_unified_ckpt_dictionary(self, lora_name_data=None) -> dict:
-        """Create a unified dictionary of ckpts with all available information, merging entries and tracking duplicates."""
-        if not lora_name_data:
-            lora_name_data = self.collect_lora_name_data()
-        unified_dict = self._build_unified_dict(lora_name_data)
-        self._cleanup_unified_dict(unified_dict)
+    def get_unified_dictionary(self, lora_dict=None, ckpt_dict=None):
+        """Create a unified dictionary of ckpts AND loras with all available information, merging entries and tracking duplicates."""
+        if not lora_dict:
+            lora_dict = self.get_unified_lora_dictionary()
+        if not ckpt_dict:
+            ckpt_dict = self.get_unified_ckpt_dictionary()
+        unified_dict = {
+            "Lora": lora_dict,
+            "Ckpt": ckpt_dict
+        }
         return unified_dict
+
+    def get_unified_ckpt_dictionary(self, ckpt_name_data=None) -> dict:
+        """Create a unified dictionary of ckpts with all available information, merging entries and tracking duplicates."""
+        if not ckpt_name_data:
+            model_dict = self.build_ckpt_model_dictionary()
+            png_dict = self.build_ckpt_png_dictionary()
+            ckpt_name_data = self.collect_model_name_data(model_dict, png_dict)
+        unified_ckpt_dict = self._build_unified_dict(ckpt_name_data)
+        self._cleanup_unified_dict(unified_ckpt_dict)
+        return unified_ckpt_dict
 
     def get_unified_lora_dictionary(self, lora_name_data=None) -> dict:
         """Create a unified dictionary of loras with all available information, merging entries and tracking duplicates."""
         if not lora_name_data:
-            lora_name_data = self.collect_lora_name_data()
-        unified_dict = self._build_unified_dict(lora_name_data)
-        self._cleanup_unified_dict(unified_dict)
-        return unified_dict
+            model_dict = self.build_lora_model_dictionary()
+            png_dict = self.build_lora_png_dictionary()
+            lora_name_data = self.collect_model_name_data(model_dict, png_dict)
+        unified_lora_dict = self._build_unified_dict(lora_name_data)
+        self._cleanup_unified_dict(unified_lora_dict)
+        return unified_lora_dict
 
-    def collect_lora_name_data(self) -> dict:
-        """Collect data from lora and png dictionaries into a unified mapping."""
-        lora_dict = self.build_lora_dictionary()
-        png_dict = self.build_png_dictionary()
-        lora_name_data = {}
-        # Collect data from lora_dict
-        for category, qualities in lora_dict.items():
-            for quality, loras in qualities.items():
-                for lora_name, model_path in loras.items():
-                    lora_name_data = self._update_lora_entry(
-                        lora_name_data,
-                        lora_name,
+    def collect_model_name_data(self, model_dict, png_dict) -> dict:
+        """Collect data from model and png dictionaries into a unified mapping."""
+        model_name_data = {}
+        for category, qualities in model_dict.items():
+            for quality, models in qualities.items():
+                for model_name, model_path in models.items():
+                    model_name_data = self._update_model_entry(
+                        model_name_data,
+                        model_name,
                         model_path=model_path,
                         png_path=None,
                         category=category,
                         quality=quality,
                     )
-        # Collect data from png_dict
         for category, qualities in png_dict.items():
             for quality, pngs in qualities.items():
-                for lora_name, png_path in pngs.items():
-                    lora_name_data = self._update_lora_entry(
-                        lora_name_data,
-                        lora_name,
+                for model_name, png_path in pngs.items():
+                    model_name_data = self._update_model_entry(
+                        model_name_data,
+                        model_name,
                         model_path=None,
                         png_path=png_path,
                         category=category,
                         quality=quality,
                     )
-        return lora_name_data
+        return model_name_data
 
-    def _update_lora_entry(self, lora_name_data, lora_name, model_path, png_path, category, quality) -> dict:
-        """Update or create an entry for a lora_name in the lora_name_data mapping."""
-        if lora_name not in lora_name_data:
-            lora_name_data[lora_name] = {
+    def _update_model_entry(self, model_name_data, model_name, model_path, png_path, category, quality) -> dict:
+        """Update or create an entry for a model_name in the model_name_data mapping."""
+        if model_name not in model_name_data:
+            model_name_data[model_name] = {
                 "model_path": model_path,
                 "png_path": png_path,
                 "category": category,
@@ -113,7 +125,7 @@ class InfoHandler:
                 "duplicates": [],
             }
         else:
-            entry = lora_name_data[lora_name]
+            entry = model_name_data[model_name]
             # Merge model_path
             if model_path and entry["model_path"] is None:
                 entry["model_path"] = model_path
@@ -141,7 +153,7 @@ class InfoHandler:
                     has_model=False,
                     has_png=True,
                 )
-        return lora_name_data
+        return model_name_data
 
     def _add_or_update_duplicate(self, duplicates, category, quality, has_model, has_png):
         """Add a new duplicate or update an existing one based on category and quality."""
@@ -154,17 +166,17 @@ class InfoHandler:
         # Add new duplicate if not found
         duplicates.append(DuplicateInfo(category=category, quality=quality, has_model=has_model, has_png=has_png))
 
-    def _build_unified_dict(self, lora_name_data) -> dict:
-        """Construct the unified dictionary from the lora_name_data mapping."""
+    def _build_unified_dict(self, model_name_data) -> dict:
+        """Construct the unified dictionary from the model_name_data mapping."""
         unified_dict = {}
-        for lora_name, data in lora_name_data.items():
+        for model_name, data in model_name_data.items():
             category = data["category"]
             quality = data["quality"]
             if category not in unified_dict:
                 unified_dict[category] = {}
             if quality not in unified_dict[category]:
                 unified_dict[category][quality] = {}
-            unified_dict[category][quality][lora_name] = ModelEntry(
+            unified_dict[category][quality][model_name] = ModelEntry(
                 model_path=data["model_path"],
                 png_path=data["png_path"],
                 duplicates=data["duplicates"],
@@ -234,7 +246,7 @@ class InfoHandler:
 
         return unified_dict
 
-    def build_png_dictionary(self) -> dict[str, dict[str, dict[str, str]]]:
+    def build_lora_png_dictionary(self) -> dict[str, dict[str, dict[str, str]]]:
         """Create an organized dictionary of png directories with structure category:quality:[(lora_name, lora_path)]."""
         png_directory_dict = {}
         for folder in os.listdir(self.lora_png_dir):
@@ -247,14 +259,14 @@ class InfoHandler:
             png_directory_dict.setdefault(category, {}).setdefault(quality, {})
             folder_path = os.path.join(self.lora_png_dir, folder)
             for lora_png_directory in os.listdir(folder_path):
-                lora_name, lora_category = self._get_lora_name_and_category_from_png_directory(lora_png_directory)
+                lora_name = self._get_lora_name_from_png_directory(lora_png_directory)
                 if not lora_name:
                     continue
                 absolute_path = os.path.normpath(os.path.join(folder_path, lora_png_directory))
                 png_directory_dict[category][quality][lora_name] = absolute_path
         return self.sort_built_dictionary(png_directory_dict)
 
-    def build_lora_dictionary(self) -> dict[str, dict[str, dict[str, str]]]:
+    def build_lora_model_dictionary(self) -> dict[str, dict[str, dict[str, str]]]:
         """Create an organized dictionary of loras with structure category:quality:[(lora_name, lora_path), ...]"""
         lora_model_dict = {}
         for folder in os.listdir(self.lora_model_dir):
@@ -275,13 +287,54 @@ class InfoHandler:
                     lora_model_dict[category][quality][lora_name] = absolute_path
         return self.sort_built_dictionary(lora_model_dict)
 
+    def build_ckpt_png_dictionary(self) -> dict[str, dict[str, dict[str, str]]]:
+        """Create an organized dictionary of png directories with structure category:quality:[(ckpt_name, ckpt_path)]."""
+        png_directory_dict = {}
+        for folder in os.listdir(self.ckpt_png_dir):
+            quality = self._get_directory_quality(folder)
+            if not quality:
+                continue
+            category = self._get_directory_category(folder)
+            if not category:
+                continue
+            png_directory_dict.setdefault(category, {}).setdefault(quality, {})
+            folder_path = os.path.join(self.ckpt_png_dir, folder)
+            for ckpt_png_directory in os.listdir(folder_path):
+                ckpt_name = self._get_ckpt_name_from_png_directory(ckpt_png_directory)
+                if not ckpt_name:
+                    continue
+                absolute_path = os.path.normpath(os.path.join(folder_path, ckpt_png_directory))
+                png_directory_dict[category][quality][ckpt_name] = absolute_path
+        return self.sort_built_dictionary(png_directory_dict)
+
+    def build_ckpt_model_dictionary(self) -> dict[str, dict[str, dict[str, str]]]:
+        """Create an organized dictionary of ckpts with structure category:quality:[(ckpt_name, ckpt_path), ...]"""
+        ckpt_model_dict = {}
+        for folder in os.listdir(self.ckpt_model_dir):
+            quality = self._get_directory_quality(folder)
+            if not quality:
+                continue
+            category = self._get_directory_category(folder)
+            if not category:
+                continue
+            ckpt_model_dict.setdefault(category, {}).setdefault(quality, {})
+            folder_path = os.path.join(self.ckpt_model_dir, folder)
+            for file in os.listdir(folder_path):
+                if file.endswith(".safetensors"):
+                    ckpt_name = self._get_ckpt_name_from_model_filepath(file)
+                    if not ckpt_name:
+                        continue
+                    absolute_path = os.path.normpath(os.path.join(folder_path, file))
+                    ckpt_model_dict[category][quality][ckpt_name] = absolute_path
+        return self.sort_built_dictionary(ckpt_model_dict)
+
     @staticmethod
     def initialize_dictionary_template():
         return {category: {quality: {} for quality in LORA_QUALITIES} for category in LORA_CATEGORIES}
 
     def find_hanging_png_directoriesOLD(self):
-        lora_dict = self.build_lora_dictionary()
-        png_dict = self.build_png_dictionary()
+        lora_dict = self.build_lora_model_dictionary()
+        png_dict = self.build_lora_png_dictionary()
         hanging = []
         for category, qualities in png_dict.items():
             for quality, loras in qualities.items():
@@ -340,27 +393,37 @@ class InfoHandler:
                 quality: dict(sorted(loras.items()))
                 for quality, loras in sorted(
                     qualities.items(),
-                    key=lambda q: InfoHandler._quality_sort_key(q[0]),
+                    key=lambda q: InfoHandler._lora_quality_sort_key(q[0]),
                     reverse=True,
                 )
             }
             for category, qualities in sorted(
                 built_dictionary.items(),
-                key=lambda q: InfoHandler._category_sort_key(q[0]),
+                key=lambda q: InfoHandler._lora_category_sort_key(q[0]),
                 reverse=True,
             )
         }
         return sorted_lora_directory_dict
 
     @staticmethod
-    def _category_sort_key(category):
+    def _lora_category_sort_key(category):
         """Use the index in LORA_CATEGORIES for sorting; if category is not found, assign a high index."""
         return LORA_CATEGORIES.index(category) if category in LORA_CATEGORIES else len(LORA_CATEGORIES)
 
     @staticmethod
-    def _quality_sort_key(quality):
+    def _lora_quality_sort_key(quality):
         """Use the index in LORA_QUALITIES for sorting; if quality is not found, assign a high index."""
         return LORA_QUALITIES.index(quality) if quality in LORA_QUALITIES else len(LORA_QUALITIES)
+
+    @staticmethod
+    def _ckpt_category_sort_key(category):
+        """Use the index in CKPT_CATEGORIES for sorting; if category is not found, assign a high index."""
+        return CKPT_CATEGORIES.index(category) if category in CKPT_CATEGORIES else len(CKPT_CATEGORIES)
+
+    @staticmethod
+    def _ckpt_quality_sort_key(quality):
+        """Use the index in CKPT_QUALITIES for sorting; if quality is not found, assign a high index."""
+        return CKPT_QUALITIES.index(quality) if quality in CKPT_QUALITIES else len(CKPT_QUALITIES)
 
     @staticmethod
     def _get_directory_category(subdirectory_name: str) -> str:
@@ -371,6 +434,9 @@ class InfoHandler:
             "character": "Character",
             "concept": "Concept",
             "style": "Style",
+            "drawn": "Drawn",
+            "semi": "Semi",
+            "real": "Real",
         }
         base_name = os.path.basename(subdirectory_name.strip("_"))
         category = base_name.split("_")[0].lower()
@@ -423,20 +489,46 @@ class InfoHandler:
         return False
 
     @staticmethod
-    def _get_lora_name_and_category_from_png_directory(subdirectory_name: str) -> tuple:
-        """Get the lora name and category from the png directory name.\n
-        E.g., "FindForgetYou_v2_Slavic_Dress_Attire_TestCards/FindForgetYou_v2_Slavic_Dress_Attire_TestCards" -> (Slavic_Dress, Attire).
+    def _get_ckpt_name_from_model_filepath(filepath: str) -> str:
+        """Function to get the ckpt name from directory or safetensors/png files.\n
+        E.g., "PONY/Drawn_Scoring/Pony_XL_PonyV6_Ckpt.safetensors" -> "PonyV6"
+        "X:\CardArchive\CkptCards\Drawn_Scoring\PonyV6" -> "PonyV6".
+        "X:\CardArchive\CkptCards\Drawn_Scoring\PonyV6\PonyV6_00001.png -> "PonyV6".
         """
-        # if subdirectory_name[:2] == "__": # Ignore folders that start with double underscore
-        #     return False
+        base_path = os.path.splitext(filepath.strip("_"))[0]
+        base_name = os.path.split(base_path)[-1]
+        if ".safetensors" in filepath:
+            pattern = r"Pony_XL_(.*?)_Ckpt"
+            match = re.search(pattern, base_name)
+            if match:
+                ckpt_name = match.group(1)
+                return ckpt_name
+            else:
+                logger.debug(f"{base_name} is not formatted properly. Missing 'Pony_XL_ or _Ckpt'")
+        else:
+            ckpt_name = base_name.replace("Pony_XL_", "").replace("_TestCards", "").replace("_Ckpt", "")
+            return ckpt_name
+        return False
+
+    @staticmethod
+    def _get_lora_name_from_png_directory(subdirectory_name: str) -> tuple:
+        """Get the lora name and category from the png directory name.\n
+        E.g., "FindForgetYou_v2_Slavic_Dress_Attire_TestCards" -> (Slavic_Dress, Attire).
+        """
         pattern = r"FindForgetYou_v2_(.*)"
         match = re.search(pattern, subdirectory_name.replace("_TestCards", ""))
         if match:
             lora_name = match.group(1)
-            split = lora_name.split("_")
-            category = split.pop()
-            return lora_name, category
-        return False, False
+            return lora_name
+        return False
+
+    @staticmethod
+    def _get_ckpt_name_from_png_directory(subdirectory_name: str) -> tuple:
+        """Get the ckpt name and category from the png directory name.\n
+        E.g., "PonyV6" -> "PonyV6".
+        """
+        ckpt_name = subdirectory_name
+        return ckpt_name
 
     @staticmethod
     def print_unified_dict(unified_dict):
