@@ -473,7 +473,7 @@ class InfoHandler:
         base_path = os.path.splitext(filepath.strip("_"))[0]
         base_name = os.path.split(base_path)[-1]
         if ".safetensors" in filepath:
-            pattern = r"Pony_XL_(.*)"
+            pattern = r"(?:Pony_XL_|ILL_)(.*)"
             match = re.search(pattern, base_name)
             if match:
                 lora_name = match.group(1)
@@ -498,13 +498,13 @@ class InfoHandler:
         base_path = os.path.splitext(filepath.strip("_"))[0]
         base_name = os.path.split(base_path)[-1]
         if ".safetensors" in filepath:
-            pattern = r"Pony_XL_(.*?)_Ckpt"
+            pattern = r"(?:Pony_XL_|ILL_)(.*)"
             match = re.search(pattern, base_name)
             if match:
-                ckpt_name = match.group(1)
+                ckpt_name = match.group(1) if "ILL_" not in match.group(1) else match.group(0)
                 return ckpt_name
             else:
-                logger.debug(f"{base_name} is not formatted properly. Missing 'Pony_XL_ or _Ckpt'")
+                logger.debug(f"{base_name} is not formatted properly. Missing 'Pony_XL_', 'ILL_' or '_Ckpt'")
         else:
             ckpt_name = base_name.replace("Pony_XL_", "").replace("_TestCards", "").replace("_Ckpt", "")
             return ckpt_name

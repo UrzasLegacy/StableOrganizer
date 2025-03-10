@@ -407,7 +407,7 @@ class StableOrganizerApp:
                 self.search_with_everything(name)
 
     def move_pair_to_quality_directory(self, target_quality) -> None:
-        """Move selections to the target quality node within the appropriate category."""
+        """Move selections to the target quality node within the appropriate category and type."""
         selected_items = self.tree.selection()
         if len(selected_items) > 1:
             selected_items = sorted(selected_items, key=lambda i_ind: self.tree.index(i_ind))
@@ -419,47 +419,48 @@ class StableOrganizerApp:
             if not self.tree.item(selection, "values"):  # invalid row selection
                 continue
             selected_path = self.get_full_path(selection)
-            category, current_quality, lora_name = selected_path.split("\\")
+            model_type, category, current_quality, model_name = selected_path.split("\\")
+            model_dir = self.lora_model_dir if model_type == "Lora" else self.config_data.get("ckpt_model_dir")
             item_values = list(self.tree.item(selection, "values"))
-            current_lora_path = item_values[1]
+            current_model_path = item_values[1]
             current_png_path = item_values[2]
-            current_lora_name = os.path.basename(current_lora_path)
+            current_lora_name = os.path.basename(current_model_path)
             current_png_dir = os.path.basename(current_png_path)
-            lora_target_path = os.path.normpath(
+            model_target_path = os.path.normpath(
                 os.path.join(
-                    self.lora_model_dir,
+                    model_dir,
                     f"{category}_{target_quality}",
                     current_lora_name,
                 )
             )
-            lora_png_target_path = os.path.normpath(
+            png_target_path = os.path.normpath(
                 os.path.join(self.lora_png_dir, f"{category}_{target_quality}", current_png_dir)
             )
             update_flag = False
-            if current_lora_path != "None" and current_lora_path != lora_target_path:
-                if not os.path.exists(os.path.dirname(lora_target_path)):
-                    logger.exception(f"Target dir does not exist: {lora_target_path}")
+            if current_model_path != "None" and current_model_path != model_target_path:
+                if not os.path.exists(os.path.dirname(model_target_path)):
+                    logger.exception(f"Target dir does not exist: {model_target_path}")
                     raise FileNotFoundError
-                self.stack.queue_command(FileMoveCommand(current_lora_path, lora_target_path))
+                self.stack.queue_command(FileMoveCommand(current_model_path, model_target_path))
                 update_flag = True
-                item_values[1] = lora_target_path
-            if current_png_path != "None" and current_png_path != lora_png_target_path:
-                if not os.path.exists(os.path.dirname(lora_png_target_path)):
-                    logger.exception(f"Target dir does not exist: {lora_png_target_path}")
+                item_values[1] = model_target_path
+            if current_png_path != "None" and current_png_path != png_target_path:
+                if not os.path.exists(os.path.dirname(png_target_path)):
+                    logger.exception(f"Target dir does not exist: {png_target_path}")
                     raise FileNotFoundError
-                self.stack.queue_command(FileMoveCommand(current_png_path, lora_png_target_path))
+                self.stack.queue_command(FileMoveCommand(current_png_path, png_target_path))
                 update_flag = True
-                item_values[2] = lora_png_target_path
+                item_values[2] = png_target_path
             if update_flag:
                 old_parent = self.tree.parent(selection)
-                new_parent = self.find_category_quality_node(category, target_quality)
+                new_parent = self.find_type_category_quality_node(model_type, category, target_quality)
                 self.stack.queue_command(TreeMoveCommand(self.tree, selection, new_parent, tuple(item_values)))
                 try:
                     results = self.stack.execute_queued_commands()
                 except Exception as e:
                     logger.exception("Queue command failure in GUI:ERROR: \n%s", e)
                     msgbox.showinfo(
-                        f"Move Failed! {current_lora_path} => {lora_target_path}",
+                        f"Move Failed! {current_model_path} => {model_target_path}",
                         e,
                     )
                     continue
@@ -476,22 +477,51 @@ class StableOrganizerApp:
             self.tree.focus(fallback_row)
             self.tree.see(fallback_row)
 
-    def find_category_quality_node(self, category, quality) -> str | None:
-        """Iterate over the tree to find the node corresponding to the target category and quality; create it if necessary"""
-        for _category in self.tree.get_children():  # Get top-level items
-            if self.tree.item(_category, "text") == category:
-                for _quality in self.tree.get_children(_category):
-                    if self.tree.item(_quality, "text") == quality:
-                        if DEBUG:
-                            logger.debug("Found treeview category node: %s", quality)
-                        return _quality
+    def find_type_category_quality_node(self, type, category, quality) -> str | None:
+        """
+        Locate or create a node in the tree corresponding to the given type, category, and quality.
+
+        Args:
+            type (str): The top-level type to search for.
+            category (str): The category under the type to search for.
+            quality (str): The quality under the category to locate or create.
+
+        Returns:
+            Optional[str]: The identifier of the located or created node, or None if the hierarchy is incomplete.
+        """
+        type_node = self._find_or_create_node(parent=None, text=type)
+        if not type_node:
+            return None
+        category_node = self._find_or_create_node(parent=type_node, text=category)
+        if not category_node:
+            return None
+        quality_node = self._find_or_create_node(parent=category_node, text=quality)
+        return quality_node
+
+    def _find_or_create_node(self, parent: str, text: str) -> str:
+        """
+        Find a child node with the given text under the specified parent. Create it if it does not exist.
+
+        Args:
+            parent (str): The parent node identifier, or None for top-level nodes.
+            text (str): The text to search for in the child nodes.
+
+        Returns:
+            str: The identifier of the located or created node.
+        """
+        for child in self.tree.get_children(parent):
+            if self.tree.item(child, "text") == text:
                 if DEBUG:
-                    logger.debug("Creating treeview category: %s", category)
-                new_quality = self.tree.insert(_category, 0, text=quality)
-                if DEBUG:
-                    logger.debug("Created treeview category node: %s", new_quality)
-                return new_quality
-        return None
+                    logger.debug("Found treeview node: %s", text)
+                return child
+
+        # Node not found, create it
+        if DEBUG:
+            logger.debug("Creating treeview node: %s", text)
+        new_node = self.tree.insert(parent, 0, text=text)
+        if DEBUG:
+            logger.debug("Created treeview node: %s", new_node)
+        return new_node
 
     def move_and_update_row(self, selected_item_id, new_parent, new_values) -> None:
         """Move treeview entries and refresh their values."""
