@@ -436,6 +436,7 @@ class StableOrganizerApp:
             png_target_path = os.path.normpath(
                 os.path.join(self.lora_png_dir, f"{category}_{target_quality}", current_png_dir)
             )
+
             update_flag = False
             if current_model_path != "None" and current_model_path != model_target_path:
                 if not os.path.exists(os.path.dirname(model_target_path)):
@@ -444,6 +445,7 @@ class StableOrganizerApp:
                 self.stack.queue_command(FileMoveCommand(current_model_path, model_target_path))
                 update_flag = True
                 item_values[1] = model_target_path
+
             if current_png_path != "None" and current_png_path != png_target_path:
                 if not os.path.exists(os.path.dirname(png_target_path)):
                     logger.exception(f"Target dir does not exist: {png_target_path}")
@@ -451,6 +453,7 @@ class StableOrganizerApp:
                 self.stack.queue_command(FileMoveCommand(current_png_path, png_target_path))
                 update_flag = True
                 item_values[2] = png_target_path
+
             if update_flag:
                 old_parent = self.tree.parent(selection)
                 new_parent = self.find_type_category_quality_node(model_type, category, target_quality)
@@ -469,6 +472,7 @@ class StableOrganizerApp:
                 if old_parent == new_parent:
                     fallback_row = updated_selection
                 parent_sort.add(new_parent)
+
         for parent in parent_sort:
             self.sort_children_simple(parent)
         fallback_row = fallback_row if fallback_row else next_row if next_row else prev_row
