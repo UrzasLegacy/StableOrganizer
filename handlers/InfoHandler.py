@@ -7,7 +7,7 @@ from dataclasses import is_dataclass
 from itertools import product
 
 from _dataclasses import ModelEntry, DuplicateInfo
-from helpers import LORA_CATEGORIES, LORA_QUALITIES, CKPT_CATEGORIES, CKPT_QUALITIES
+from helpers import CKPT_BASE_STRING, LORA_BASE_STRING, CKPT_BASES, LORA_BASES, LORA_CATEGORIES, LORA_QUALITIES, CKPT_CATEGORIES, CKPT_QUALITIES
 
 
 ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -456,18 +456,25 @@ class InfoHandler:
         base_path = os.path.splitext(filepath.strip("_"))[0]
         base_name = os.path.split(base_path)[-1]
         if ".safetensors" in filepath:
-            pattern = r"(?:Pony_XL_|ILL_)(.*)"
+            pattern = r"^(?:" + CKPT_BASE_STRING + r")(.*)"
             match = re.search(pattern, base_name)
             if match:
                 lora_name = match.group(1)
+                for base in CKPT_BASES[1:]:
+                    if base in base_name:
+                        lora_name = base + lora_name
                 return lora_name
             else:
                 logger.debug(f"{base_name} is not formatted properly. Missing 'Pony_XL_'")
-        elif "FindForgetYou_v2_" in base_name:
+        elif any(base in base_name for base in LORA_BASES):
             if ".png" in filepath:
                 base_path = os.path.dirname(filepath.strip("_"))
                 base_name = os.path.split(base_path)[-1]
-            lora_name = base_name.replace("FindForgetYou_v2_", "").replace("_TestCards", "")
+            #lora_name = base_name.replace("FindForgetYou_v2_", "").replace("ILL_WAIAniNSFW_v11_", "ILL_").replace("_TestCards", "")
+            lora_name = re.sub(LORA_BASE_STRING, "", base_name).replace("_TestCards", "")
+            for base in LORA_BASES:
+                if base in base_name:
+                    lora_name = base + lora_name
             return lora_name
         return False
 
@@ -480,15 +487,25 @@ class InfoHandler:
         base_path = os.path.splitext(filepath.strip("_"))[0]
         base_name = os.path.split(base_path)[-1]
         if ".safetensors" in filepath:
-            pattern = r"(?:Pony_XL_|ILL_)(.*)"
+            #pattern = r"(?:Pony_XL_|ILL_)(.*)"
+            pattern = r"^(?:" + CKPT_BASE_STRING + r")(.*)"
             match = re.search(pattern, base_name)
             if match:
-                ckpt_name = match.group(1) if "ILL_" not in match.group(1) else match.group(0)
+                #ckpt_name = match.group(1) if "ILL_" not in match.group(1) else match.group(0)
+                ckpt_name = match.group(1)
+                for base in CKPT_BASES[1:]:
+                    if base in base_name:
+                        ckpt_name = base + ckpt_name
+                ckpt_name = ckpt_name.replace("_TestCards", "").replace("_Ckpt", "")
                 return ckpt_name
             else:
                 logger.debug(f"{base_name} is not formatted properly. Missing 'Pony_XL_', 'ILL_' or '_Ckpt'")
         else:
-            ckpt_name = base_name.replace("Pony_XL_", "").replace("_TestCards", "").replace("_Ckpt", "")
+            #ckpt_name = base_name.replace("Pony_XL_", "").replace("_TestCards", "").replace("_Ckpt", "")
+            ckpt_name = re.sub(CKPT_BASE_STRING, "", base_name).replace("_TestCards", "").replace("_Ckpt", "")
+            for base in CKPT_BASES[1:]:
+                if base in base_name:
+                    ckpt_name = base + ckpt_name
             return ckpt_name
         return False
 
@@ -496,7 +513,7 @@ class InfoHandler:
         """Get the lora name and category from the png directory name.\n
         E.g., "FindForgetYou_v2_Slavic_Dress_Attire_TestCards" -> (Slavic_Dress, Attire).
         """
-        pattern = r"FindForgetYou_v2_(.*)"
+        pattern = r"(?:FindForgetYou_v2_|ILL_WAIAniNSFW_v11_)(.*)"
         match = re.search(pattern, subdirectory_name.replace("_TestCards", ""))
         if match:
             lora_name = match.group(1)

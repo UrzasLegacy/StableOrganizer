@@ -3,7 +3,17 @@ import re
 from itertools import product
 
 ROOT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
-
+CKPT_BASES = [
+    "Pony_XL_",
+    "ILL_",
+]
+CKPT_BASE_STRING = "|".join(CKPT_BASES)
+LORA_BASES = [
+    "FindForgetYou_v2_",
+    "ILL_BetterDays_",
+    "ILL_WAIAniNSFW_v11_"
+]
+LORA_BASE_STRING = "|".join(LORA_BASES)
 LORA_CATEGORIES = ["Attire", "Character", "Concept", "Style"]
 LORA_QUALITIES = [
     "In",
