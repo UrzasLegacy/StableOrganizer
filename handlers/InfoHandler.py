@@ -61,10 +61,7 @@ class InfoHandler:
             lora_dict = self.get_unified_lora_dictionary()
         if not ckpt_dict:
             ckpt_dict = self.get_unified_ckpt_dictionary()
-        unified_dict = {
-            "Lora": lora_dict,
-            "Ckpt": ckpt_dict
-        }
+        unified_dict = {"Lora": lora_dict, "Ckpt": ckpt_dict}
         return unified_dict
 
     def get_unified_ckpt_dictionary(self, ckpt_name_data=None) -> dict:
@@ -328,10 +325,6 @@ class InfoHandler:
                     ckpt_model_dict[category][quality][ckpt_name] = absolute_path
         return self.sort_built_dictionary(ckpt_model_dict)
 
-    @staticmethod
-    def initialize_dictionary_template():
-        return {category: {quality: {} for quality in LORA_QUALITIES} for category in LORA_CATEGORIES}
-
     def find_hanging_png_directoriesOLD(self):
         lora_dict = self.build_lora_model_dictionary()
         png_dict = self.build_lora_png_dictionary()
@@ -371,8 +364,7 @@ class InfoHandler:
         match = self.cat_qual_pattern.search(filepath)
         return match.group() if match else "None"
 
-    @staticmethod
-    def get_paths_by_lora_name(dictionary, lora_name) -> str:
+    def get_paths_by_lora_name(self, dictionary, lora_name) -> str:
         """Traverse the dictionary and find the matching Lora name."""
         for _category, qualities in dictionary.items():
             for _quality, loras in qualities.items():
@@ -381,52 +373,45 @@ class InfoHandler:
                         return lora_model_path, lora_png_path
         return "None"
 
-    @staticmethod
-    def init_regex_pattern(category_quality_combinations):
+    def init_regex_pattern(self, category_quality_combinations):
         return re.compile("|".join(category_quality_combinations))
 
-    @staticmethod
-    def sort_built_dictionary(built_dictionary: dict) -> dict:
+    def sort_built_dictionary(self, built_dictionary: dict) -> dict:
         """Sort the dictionary by category and quality keys."""
         sorted_lora_directory_dict = {
             category: {
                 quality: dict(sorted(loras.items()))
                 for quality, loras in sorted(
                     qualities.items(),
-                    key=lambda q: InfoHandler._lora_quality_sort_key(q[0]),
+                    key=lambda q: self._lora_quality_sort_key(q[0]),
                     reverse=True,
                 )
             }
             for category, qualities in sorted(
                 built_dictionary.items(),
-                key=lambda q: InfoHandler._lora_category_sort_key(q[0]),
+                key=lambda q: self._lora_category_sort_key(q[0]),
                 reverse=True,
             )
         }
         return sorted_lora_directory_dict
 
-    @staticmethod
-    def _lora_category_sort_key(category):
+    def _lora_category_sort_key(self, category):
         """Use the index in LORA_CATEGORIES for sorting; if category is not found, assign a high index."""
         return LORA_CATEGORIES.index(category) if category in LORA_CATEGORIES else len(LORA_CATEGORIES)
 
-    @staticmethod
-    def _lora_quality_sort_key(quality):
+    def _lora_quality_sort_key(self, quality):
         """Use the index in LORA_QUALITIES for sorting; if quality is not found, assign a high index."""
         return LORA_QUALITIES.index(quality) if quality in LORA_QUALITIES else len(LORA_QUALITIES)
 
-    @staticmethod
-    def _ckpt_category_sort_key(category):
+    def _ckpt_category_sort_key(self, category):
         """Use the index in CKPT_CATEGORIES for sorting; if category is not found, assign a high index."""
         return CKPT_CATEGORIES.index(category) if category in CKPT_CATEGORIES else len(CKPT_CATEGORIES)
 
-    @staticmethod
-    def _ckpt_quality_sort_key(quality):
+    def _ckpt_quality_sort_key(self, quality):
         """Use the index in CKPT_QUALITIES for sorting; if quality is not found, assign a high index."""
         return CKPT_QUALITIES.index(quality) if quality in CKPT_QUALITIES else len(CKPT_QUALITIES)
 
-    @staticmethod
-    def _get_directory_category(subdirectory_name: str) -> str:
+    def _get_directory_category(self, subdirectory_name: str) -> str:
         """Function to get the category from a lora or png directory name.\n
         E.g., "S:/Loras/Attire_Good" -> "Good" OR "S:/PNGs/good" -> "Good"."""
         category_map = {
@@ -442,8 +427,7 @@ class InfoHandler:
         category = base_name.split("_")[0].lower()
         return category_map.get(category, None)
 
-    @staticmethod
-    def _get_directory_quality(subdirectory_name: str) -> str:
+    def _get_directory_quality(self, subdirectory_name: str) -> str:
         """Function to get the quality from a lora or png directory name.\n
         E.g., "S:/Loras/Attire_Good" -> "Good" OR "S:/PNGs/good" -> "Good"."""
         quality_map = {
@@ -463,8 +447,7 @@ class InfoHandler:
         quality = base_name.split("_")[-1].lower()
         return quality_map.get(quality, None)
 
-    @staticmethod
-    def _get_lora_name_from_model_filepath(filepath: str) -> str:
+    def _get_lora_name_from_model_filepath(self, filepath: str) -> str:
         """Function to get the lora name from directory or safetensors/png files.\n
         E.g., "PONY/Attire_Good/Pony_XL_Slavic_Dress_Attire.safetensors" -> "Slavic_Dress_Attire"
         "X:\CardArchive\LoraCards\Attire_Scoring\FindForgetYou_v2_Slavic_Dress_Attire_TestCards" -> "Slavic_Dress_Attire".
@@ -488,8 +471,7 @@ class InfoHandler:
             return lora_name
         return False
 
-    @staticmethod
-    def _get_ckpt_name_from_model_filepath(filepath: str) -> str:
+    def _get_ckpt_name_from_model_filepath(self, filepath: str) -> str:
         """Function to get the ckpt name from directory or safetensors/png files.\n
         E.g., "PONY/Drawn_Scoring/Pony_XL_PonyV6_Ckpt.safetensors" -> "PonyV6"
         "X:\CardArchive\CkptCards\Drawn_Scoring\PonyV6" -> "PonyV6".
@@ -510,8 +492,7 @@ class InfoHandler:
             return ckpt_name
         return False
 
-    @staticmethod
-    def _get_lora_name_from_png_directory(subdirectory_name: str) -> tuple:
+    def _get_lora_name_from_png_directory(self, subdirectory_name: str) -> tuple:
         """Get the lora name and category from the png directory name.\n
         E.g., "FindForgetYou_v2_Slavic_Dress_Attire_TestCards" -> (Slavic_Dress, Attire).
         """
@@ -522,13 +503,16 @@ class InfoHandler:
             return lora_name
         return False
 
-    @staticmethod
-    def _get_ckpt_name_from_png_directory(subdirectory_name: str) -> tuple:
+    def _get_ckpt_name_from_png_directory(self, subdirectory_name: str) -> tuple:
         """Get the ckpt name and category from the png directory name.\n
         E.g., "PonyV6" -> "PonyV6".
         """
         ckpt_name = subdirectory_name
         return ckpt_name
+
+    @staticmethod
+    def initialize_dictionary_template():
+        return {category: {quality: {} for quality in LORA_QUALITIES} for category in LORA_CATEGORIES}
 
     @staticmethod
     def print_unified_dict(unified_dict):
