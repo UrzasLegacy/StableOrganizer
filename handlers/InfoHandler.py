@@ -513,7 +513,8 @@ class InfoHandler:
         """Get the lora name and category from the png directory name.\n
         E.g., "FindForgetYou_v2_Slavic_Dress_Attire_TestCards" -> (Slavic_Dress, Attire).
         """
-        pattern = r"(?:FindForgetYou_v2_|ILL_WAIAniNSFW_v11_)(.*)"
+        pattern = r"^(?:" + LORA_BASE_STRING + r")(.*)"
+        #pattern = r"(?:FindForgetYou_v2_|ILL_WAIAniNSFW_v11_)(.*)"
         match = re.search(pattern, subdirectory_name.replace("_TestCards", ""))
         if match:
             lora_name = match.group(1)

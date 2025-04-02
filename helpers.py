@@ -11,6 +11,8 @@ CKPT_BASE_STRING = "|".join(CKPT_BASES)
 LORA_BASES = [
     "FindForgetYou_v2_",
     "ILL_BetterDays_",
+    "ILL_Stein_v4_",
+    "ILL_WAIAniNSFW_v9_",
     "ILL_WAIAniNSFW_v11_"
 ]
 LORA_BASE_STRING = "|".join(LORA_BASES)
