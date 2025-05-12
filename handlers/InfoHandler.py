@@ -5,7 +5,7 @@ import json
 
 from dataclasses import is_dataclass
 from itertools import product
-
+from typing import Optional
 from _dataclasses import ModelEntry, DuplicateInfo
 from helpers import CKPT_BASE_STRING, LORA_BASE_STRING, CKPT_BASES, LORA_BASES, LORA_CATEGORIES, LORA_QUALITIES, CKPT_CATEGORIES, CKPT_QUALITIES
 
@@ -26,8 +26,6 @@ def recursive_fetch(dictionary, key):
 
 
 class InfoHandler:
-    """ """
-
     # region Init
     def __init__(self, config_data: dict = None) -> None:
         self.lora_model_dir: str = None
@@ -109,6 +107,7 @@ class InfoHandler:
                         category=category,
                         quality=quality,
                     )
+        #logger.debug(f"Updated model_name_data: {model_name_data}")
         return model_name_data
 
     def _update_model_entry(self, model_name_data, model_name, model_path, png_path, category, quality) -> dict:
@@ -178,6 +177,7 @@ class InfoHandler:
                 png_path=data["png_path"],
                 duplicates=data["duplicates"],
             )
+        #logger.debug(f"Unified dictionary: {json.dumps(unified_dict, indent=2)}")
         return unified_dict
 
     def _cleanup_unified_dict(self, unified_dict):
@@ -360,7 +360,6 @@ class InfoHandler:
         "X:\CardArchive\LoraCards\Attire_Scoring\FindForgetYou_v2_Slavic_Dress_Attire_TestCards" -> "Good"
         "X:\CardArchive\LoraCards\Attire_Scoring\FindForgetYou_v2_Slavic_Dress_Attire_TestCards\FindForgetYou_v2_Slavic_Dress_Attire_TestCards_00001.png" -> "Good".
         """
-
         match = self.cat_qual_pattern.search(filepath)
         return match.group() if match else "None"
 
@@ -384,13 +383,13 @@ class InfoHandler:
                 for quality, loras in sorted(
                     qualities.items(),
                     key=lambda q: self._lora_quality_sort_key(q[0]),
-                    reverse=True,
+                    reverse=False,
                 )
             }
             for category, qualities in sorted(
                 built_dictionary.items(),
                 key=lambda q: self._lora_category_sort_key(q[0]),
-                reverse=True,
+                reverse=False,
             )
         }
         return sorted_lora_directory_dict

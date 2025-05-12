@@ -32,6 +32,7 @@ DEFAULT_CONFIG = {
 DEBUG = False
 logger = logging.getLogger(__name__)
 
+#TODO dir_mismatch tag only checks if quality dirs match, not total directory path
 
 class StableOrganizerApp:
     """GUI for Model and Output Organization"""

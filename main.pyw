@@ -31,11 +31,11 @@ logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[logging.FileHandler(log_file_path), logging.StreamHandler()],
+    handlers=[logging.FileHandler(log_file_path)], #, logging.StreamHandler()
 )
 logger = logging.getLogger(__name__)
 
-
+#logger.debug('test')
 if __name__ == "__main__":
     root = tk.Tk()
     app = StableOrganizerApp(root)

@@ -48,7 +48,7 @@ class FileHandler(DataStoreInterface):
         self._initialize_model_directory(self.ckpt_model_dir, CKPT_CATEGORIES, CKPT_QUALITIES)
 
     def _initialize_model_directory(self, parent_dir: str, categories: list, qualities: list) -> None:
-        """Create subdirectories by category and quality."""
+        """Create target subdirectories by category and quality."""
         if not os.path.exists(parent_dir):
             try:
                 os.makedirs(parent_dir)

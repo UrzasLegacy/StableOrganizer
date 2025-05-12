@@ -124,7 +124,6 @@ class CompositeCommand(Command):
         details: Description of the commands in this composite
         result: CommandResult"""
 
-
     def __init__(self, commands):
         self.commands: list[Command] = commands
         self.results = []
@@ -310,7 +309,7 @@ class TreeMoveCommand(Command):
     def result(self) -> str:
         return self._result
 
-    def execute(self):
+    def execute(self) -> CommandResult | None:
         """Move treeview entry and refresh its values."""
         try:
             if not self.item_id:
