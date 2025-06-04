@@ -27,13 +27,15 @@ def recursive_fetch(dictionary, key):
 
 class InfoHandler:
     # region Init
-    def __init__(self, config_data: dict = None) -> None:
-        self.lora_model_dir: str = None
-        self.lora_png_dir: str = None
-        self.ckpt_model_dir: str = None
-        self.ckpt_png_dir: str = None
-        self.output_dir: str = None
-        self.everything_dir: str = None
+    def __init__(self, config_data: Optional[dict] = None) -> None:
+        self.lora_model_dir: Optional[str] = None
+        self.additional_lora_model_source_dirs: Optional[str] = None
+        self.lora_png_dir: Optional[str] = None
+        self.ckpt_model_dir: Optional[str] = None
+        self.additional_ckpt_model_source_dirs: Optional[str] = None
+        self.ckpt_png_dir: Optional[str] = None
+        self.output_dir: Optional[str] = None
+        self.everything_dir: Optional[str] = None
         self.category_quality_combinations: list = [
             f"{category}_{quality}" for category, quality in product(LORA_CATEGORIES, LORA_QUALITIES)
         ]
@@ -45,8 +47,10 @@ class InfoHandler:
 
     def _init_dirs(self, config_data: dict):
         self.lora_model_dir: str = config_data.get("lora_model_dir")
+        self.additional_lora_model_source_dirs: str = config_data.get("additional_lora_model_source_dirs")
         self.lora_png_dir: str = config_data.get("lora_png_dir")
         self.ckpt_model_dir: str = config_data.get("ckpt_model_dir")
+        self.additional_ckpt_model_source_dirs: str = config_data.get("additional_ckpt_model_source_dirs")
         self.ckpt_png_dir: str = config_data.get("ckpt_png_dir")
         self.output_dir: str = config_data.get("output_dir")
         self.everything_dir: str = config_data.get("everything_dir")
@@ -307,22 +311,27 @@ class InfoHandler:
     def build_ckpt_model_dictionary(self) -> dict[str, dict[str, dict[str, str]]]:
         """Create an organized dictionary of ckpts with structure category:quality:[(ckpt_name, ckpt_path), ...]"""
         ckpt_model_dict = {}
-        for folder in os.listdir(self.ckpt_model_dir):
-            quality = self._get_directory_quality(folder)
-            if not quality:
-                continue
-            category = self._get_directory_category(folder)
-            if not category:
-                continue
-            ckpt_model_dict.setdefault(category, {}).setdefault(quality, {})
-            folder_path = os.path.join(self.ckpt_model_dir, folder)
-            for file in os.listdir(folder_path):
-                if file.endswith(".safetensors"):
-                    ckpt_name = self._get_ckpt_name_from_model_filepath(file)
-                    if not ckpt_name:
-                        continue
-                    absolute_path = os.path.normpath(os.path.join(folder_path, file))
-                    ckpt_model_dict[category][quality][ckpt_name] = absolute_path
+        parent_dirs = self.ckpt_model_dir
+        if self.additional_ckpt_model_source_dirs:
+            parent_dirs += "|" + self.additional_ckpt_model_source_dirs
+        for dir_path in list(parent_dirs.split("|")):
+            for folder in os.listdir(dir_path):
+                folder = folder.strip()
+                quality = self._get_directory_quality(folder)
+                if not quality:
+                    continue
+                category = self._get_directory_category(folder)
+                if not category:
+                    continue
+                ckpt_model_dict.setdefault(category, {}).setdefault(quality, {})
+                folder_path = os.path.join(dir_path, folder)
+                for file in os.listdir(folder_path):
+                    if file.endswith(".safetensors"):
+                        ckpt_name = self._get_ckpt_name_from_model_filepath(file)
+                        if not ckpt_name:
+                            continue
+                        absolute_path = os.path.normpath(os.path.join(folder_path, file))
+                        ckpt_model_dict[category][quality][ckpt_name] = absolute_path
         return self.sort_built_dictionary(ckpt_model_dict)
 
     def find_hanging_png_directoriesOLD(self):

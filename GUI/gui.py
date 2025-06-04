@@ -25,7 +25,9 @@ DEFAULT_CONFIG = {
     "ckpt_png_dir": None,
     "lora_png_dir": None,
     "ckpt_model_dir": None,
+    "additional_ckpt_model_source_dirs": None,
     "lora_model_dir": None,
+    "additional_lora_model_source_dirs": None,
     "output_dir": None,
 }
 

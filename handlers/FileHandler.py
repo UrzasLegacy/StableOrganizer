@@ -33,8 +33,10 @@ class FileHandler(DataStoreInterface):
 
     def __init__(self, config_data: dict = None, stack: Stack = None) -> None:
         self.lora_model_dir = config_data.get("lora_model_dir")
+        self.additional_lora_model_source_dirs = config_data.get("additional_lora_model_source_dirs")
         self.lora_png_dir = config_data.get("lora_png_dir")
         self.ckpt_model_dir = config_data.get("ckpt_model_dir")
+        self.additional_ckpt_model_source_dirs = config_data.get("additional_ckpt_model_source_dirs")
         self.ckpt_png_dir = config_data.get("ckpt_png_dir")
         self.model_dict_path = config_data.get("model_dict_path")
         self.output_dir = config_data.get("output_dir")
